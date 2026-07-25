@@ -47,3 +47,8 @@ arena_server/saves/
 # Local agent/tooling state
 .agent/
 .claude/
+
+# Personal deployment runbook + host details (server IP, SSH user, key paths).
+# Never commit these — a public repo shouldn't hand out recon for the VM.
+deploy/*.local.md
+deploy/*.local.env

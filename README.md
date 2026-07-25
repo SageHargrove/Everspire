@@ -9,7 +9,7 @@ positioning, gear, class synergy, morale, and a hero's personality (their
 
 ---
 
-## 🎮 Playtest — Send This to Friends
+## Playtest — Send This to Friends
 
 **To play (no coding needed):**
 
@@ -26,66 +26,6 @@ That's it — you play on the built-in art. Everyone shares the same world serve
 2. Launch with `PLAY.bat`, then enter **any API key** in the tutorial or **Settings → AI Generation**. Your summons will now roll brand-new heroes in the game's art style instead of the shared gallery.
 
 No NVIDIA GPU? Skip this — the game plays fine on the built-in art.
-
----
-
-## 🖥️ Hosting the Multiplayer Server (Liam)
-
-The World server (accounts, PvP, raids) runs in Docker on the Oracle VM at
-**`https://170.9.255.240.nip.io`**. The game client already points at it.
-SSH key: `C:\Users\liamh\.ssh\oracle_toe.key` · admin key:
-`C:\Users\liamh\.ssh\toe_arena_admin_key.txt` (both outside this repo).
-
-```bash
-# SSH in
-ssh -i C:\Users\liamh\.ssh\oracle_toe.key ubuntu@170.9.255.240
-
-# --- Check status ---
-sudo docker ps                       # is world-server running?
-sudo docker logs --tail 50 world-server
-curl -s https://170.9.255.240.nip.io/   # should return a status JSON
-
-# --- Stop the server (players can't reach multiplayer while down) ---
-sudo docker stop world-server
-
-# --- Start it back up ---
-sudo docker start world-server
-
-# --- Restart (e.g. after config change) ---
-sudo docker restart world-server
-```
-
-It's set to `--restart unless-stopped`, so it comes back on its own after a
-reboot or crash — you only ever run `stop`/`start` to deliberately take
-multiplayer offline or bring it back.
-
-**Redeploying after code changes** to `arena_server/` or `backend/` — from
-the repo root on your PC:
-
-```bash
-# 1. bundle both dirs (arena imports the backend combat engine)
-tar czf /tmp/toe_deploy.tgz --exclude=__pycache__ --exclude="*.db" \
-    --exclude=backend/static --exclude=backend/venv --exclude=backend/saves \
-    arena_server backend
-
-# 2. ship + rebuild + relaunch (keeps the arena.db volume + admin key)
-scp -i C:\Users\liamh\.ssh\oracle_toe.key /tmp/toe_deploy.tgz ubuntu@170.9.255.240:/home/ubuntu/
-ssh -i C:\Users\liamh\.ssh\oracle_toe.key ubuntu@170.9.255.240 \
-  "rm -rf arena_server backend && tar xzf toe_deploy.tgz && \
-   sudo docker build -q -f arena_server/Dockerfile -t tower-world-server . && \
-   sudo docker rm -f world-server; \
-   sudo docker run -d --name world-server --restart unless-stopped \
-     -p 127.0.0.1:8001:8001 -e ARENA_ADMIN_KEY=\$(cat ~/admin_key 2>/dev/null || echo changeme) \
-     -v world_data:/app/data tower-world-server"
-```
-
-> The arena `Dockerfile` must be built from the **repo root** (`-f arena_server/Dockerfile .`),
-> not from inside `arena_server/` — the image needs the sibling `backend/`
-> package for the shared combat simulation.
-
-**Wipe multiplayer data** (junk accounts, corruption — playtest data is
-disposable): `sudo docker rm -f world-server && sudo docker volume rm world_data`,
-then run the launch command above to start fresh.
 
 ---
 
@@ -150,9 +90,12 @@ file per profile). DB schema migrations run automatically at startup.
 4. **Tower** → advance floor by floor — combat, events (narrative choices,
    sometimes turning into real fights), explore, escort, survival, ambush,
    blitz, and more. Every 5th floor is a miniboss comp-check (survival /
-   behemoth / assassin / twins), every 10th a boss. Combat resolves
-   automatically; deaths are permanent and leave a Legacy bonus. Floor
-   type stays hidden (?) until you've visited it once.
+   behemoth / assassin / twins), every 10th a boss with real phases: wound
+   one past two-thirds and again past a third of its health and it changes
+   the fight. Combat resolves automatically; deaths are permanent and leave
+   a Legacy bonus. Floor type stays hidden (?) until you've visited it once —
+   after that, what you learned about it (condition, elite, boss phases) is
+   remembered.
 5. **Items (Vault)** → equipment (weapons — Sword/Spear/Tome/Bow/Dagger;
    armor — Robe/Light/Brigandine/Heavy; accessories — Ring/Amulet/Charm,
    with **two** accessory slots per hero), each type with its own stat
@@ -165,19 +108,74 @@ file per profile). DB schema migrations run automatically at startup.
    is built with gold, all core facilities unlocked by floor 25), cook
    Farm ingredients into consumables, refine Aether ship fuel, rest the
    roster, design your Team Banner, and read the Hero Chatter log / Lore
-   Journal. The Wall is the foundation: no facility can be upgraded above
-   its level. In the Base Hierarchy, every hero lives on a base
-   floor (Floor 1 by default; a new floor unlocks every 10 Tower floors) —
-   spreading them out trades a bigger stat bonus per hero against coverage.
+   Journal. Station a support-class hero in their own facility and their
+   **Company Boon** rides along on every climb — a Chef's feast, a Medic's
+   field surgery, a Tactician's opening gambit; which boon depends on the
+   evolution branch they took, and its strength on their star and growth.
+   Several facilities also open a hands-on minigame (forge timing, sigil
+   tracing, a strategy board against a hero) that can multiply the result —
+   always skippable, with the auto-resolve as the baseline. The Wall is the
+   foundation: no facility can be upgraded above its level. In the Base
+   Hierarchy, every hero lives on a base floor (Floor 1 by default; a new
+   floor unlocks every 10 Tower floors) — spreading them out trades a
+   bigger stat bonus per hero against coverage.
 7. **World** → everything multiplayer: PvP arena against snapshot teams,
-   PvP/PvE leaderboards, and a training market — with base raids and
-   server-wide tournaments designed in as coming-soon sections. The game
-   auto-connects to the World server (address:
+   PvP/PvE leaderboards, guilds (roster, shop, daily boss, chat, weekly
+   wars), base raids, server-wide tournaments, and a training market. The
+   game auto-connects to the World server (address:
    `DEFAULT_ARENA_SERVER_URL` in `frontend/src/api/arenaServerClient.js`).
 8. **Achievements** → milestones across Tower/Summoning/Roster/Combat/
    Economy/Equipment/Arena, with a Claim All button. Rewards are gems and,
    for the hardest, star-tiered Summon Tickets — consumables (Items tab)
    that guarantee a 4★+/5★+/6★+/7★+ hero pull.
+
+Heroes also accumulate **Deeds** — permanent one-line records of what they
+actually did ("Felled the Hollow King", "Refused to die on floor 47"). Deeds
+outlive the hero: the Memorial keeps them. The in-game **Codex** works the
+same way, unlocking a page the first time you meet the thing it describes.
+
+---
+
+## Hosting Your Own World Server
+
+The World server (`arena_server/`) is a separate FastAPI service that owns
+accounts, PvP/ELO, guilds, chat, raids, tournaments, and the training market.
+It never touches any player's local save. Self-hosting it:
+
+```bash
+# Build from the REPO ROOT — the image needs the sibling backend/ package
+# for the shared combat engine.
+docker build -f arena_server/Dockerfile -t tower-world-server .
+
+# Publish to LOCALHOST ONLY and put a TLS reverse proxy (Caddy, nginx) in
+# front. A bare `-p 8001:8001` binds every interface, and Docker's iptables
+# rules bypass ufw — that exposes the API directly, in cleartext.
+docker run -d --name world-server --restart unless-stopped \
+  -p 127.0.0.1:8001:8001 \
+  -e ARENA_ADMIN_KEY="<long random string>" \
+  -v world_data:/app/data \
+  tower-world-server
+```
+
+Then point `DEFAULT_ARENA_SERVER_URL` in
+`frontend/src/api/arenaServerClient.js` at your public hostname and rebuild
+the frontend.
+
+Environment variables:
+
+| Variable | Purpose |
+|---|---|
+| `ARENA_ADMIN_KEY` | Enables admin routes (season reset). Unset = admin routes disabled entirely. |
+| `ARENA_DB_PATH` | Where `arena.db` lives (defaults to `/app/data/arena.db` in the image). |
+| `ARENA_ALLOWED_ORIGINS` | Comma-separated CORS allowlist. Empty (default) blocks browser cross-origin calls; the game client doesn't need it. |
+| `ARENA_TRUST_PROXY` | `0` disables `X-Forwarded-For` parsing for direct-exposure setups. Default trusts it, but only from a private/loopback peer. |
+
+Security posture, threat model, and the hardening applied are documented in
+[`docs/SECURITY.md`](docs/SECURITY.md). Regression tests:
+
+```bash
+cd arena_server && python test_security.py
+```
 
 ---
 
@@ -188,24 +186,24 @@ PLAY.bat                      # Player launcher — venv bootstrap + game at loc
 INSTALL_GENERATION.bat        # Optional: local AI hero generation (NVIDIA GPU)
 generation/loras/             # Hero style models (git LFS) pulled by the installer
 app_launcher.py               # Older one-step desktop launcher (backend + ComfyUI + window)
-Dockerfile                    # Container build for the backend
-docs/                         # Design/plan documents
-openspec/                     # Feature specs (openspec workflow)
+Dockerfile                    # Container build for the single-player backend
+docs/                         # Design/plan documents + SECURITY.md
+openspec/                     # Feature specs (openspec workflow) + backlog
 
 backend/
   main.py                     # FastAPI app, CORS, serves frontend dist/ + static assets
   database.py                 # SQLite schema + startup migrations, per-profile saves
   services/                   # Game logic — combat, gacha, classes, egos, legacies,
                               #   equipment (weapon/armor/accessory type identities),
-                              #   facilities, materials, level/ascension, skills,
-                              #   morale, events, LLM flavor text, portrait generation
+                              #   facilities, support boons, materials, level/ascension,
+                              #   skills, morale, deeds, events, LLM flavor text,
+                              #   portrait generation
   routers/                    # API endpoints — heroes, gacha, tower, base, runs,
                               #   equipment, relics, crafting, arena, profiles, chat
   scripts/                    # One-off/maintenance scripts (icon generation,
                               #   card regeneration, db patches)
   tests/                      # Test scripts
   static/icons/               # Equipment art (weapons/armor, rarity-tiered)
-  static/facilities/          # Facility banner art
   static/portraits/           # Hero/enemy/boss art (git-ignored, locally generated)
   saves/                      # Per-profile save DBs (git-ignored)
 
@@ -213,18 +211,16 @@ frontend/src/
   App.jsx                     # Tab layout, onboarding tour, resource header
   api/client.js               # All API calls (+ arenaServerClient.js for PvP)
   components/                 # HeroCard, SynthesisChamber, CompareModal, DialogHost,
-                              #   GameIcon, EquipmentTypeIcon, CombatArena, overlays...
+                              #   Sigil, CombatArena, Codex, Tip, overlays...
+  components/minigames/       # Facility minigames + the shared difficulty shell
   pages/                      # Summon, Heroes, Tower, Base, Arena, Achievements,
                               #   Inventory (Vault), Log
-frontend/public/icons/        # UI icon art (currencies, classes, floors, accessories)
+frontend/public/icons/        # UI icon art (currencies, classes, floors, status, boons)
 
-arena_server/                 # The World server — separate FastAPI service you
-                              #   host for PvP (accounts, ELO, matches, market).
-                              #   Has its own Dockerfile:
-                              #     docker build -t tower-world-server ./arena_server
-                              #     docker run -d -p 8001:8001 \
-                              #       -e ARENA_ADMIN_KEY=<long-random-string> \
-                              #       -v world_data:/app/data tower-world-server
+arena_server/                 # The World server — see "Hosting Your Own World
+                              #   Server" above. security.py holds the rate
+                              #   limiter, body caps, and input clamping;
+                              #   test_security.py is the exploit-regression suite.
 ```
 
 ---
@@ -235,6 +231,11 @@ arena_server/                 # The World server — separate FastAPI service yo
   are placeholder-quality, and the Hydra family (Hydra, Hydra Spawn, Wyvern
   Stormrider, and the Hydra Sovereign boss) is temporarily cut from the roster
   pending a stronger monster art model (`ToE_Monsters_v2`, to be trained).
+- **Arena stats are client-authoritative** — the World server has no access to
+  any player's save, so it cannot recompute hero stats and a modified client
+  can field a stronger team than it owns. Submissions are clamped to plausible
+  magnitudes so the blast radius stays "wins ladder matches it shouldn't."
+  Accepted for a friends-scale ladder; see `docs/SECURITY.md`.
 
 ## Roadmap (working as designed, not gaps)
 
