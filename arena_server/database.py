@@ -55,6 +55,26 @@ def init_db():
             log_json TEXT,
             timestamp REAL NOT NULL
         );
+
+        -- Login audit trail (time/IP), surfaced to the player via
+        -- /auth/logins so an unfamiliar sign-in is visible to them.
+        CREATE TABLE IF NOT EXISTS login_audit (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            ip TEXT,
+            at REAL NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_login_audit_user ON login_audit(username, id DESC);
+
+        -- One paid hire per (hirer, listing) FOREVER. Without this the
+        -- training market minted unlimited gems: every repeat hire paid the
+        -- lister again while charging the hirer nothing server-side.
+        CREATE TABLE IF NOT EXISTS market_hires (
+            listing_id INTEGER NOT NULL,
+            hirer TEXT NOT NULL,
+            at REAL NOT NULL,
+            PRIMARY KEY (listing_id, hirer)
+        );
         
         CREATE TABLE IF NOT EXISTS arena_season_rewards (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

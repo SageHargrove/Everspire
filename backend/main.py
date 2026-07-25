@@ -18,9 +18,51 @@ init_db()
 
 app = FastAPI(title="Tower of Eternity Backend")
 
+# ─── drive-by request guard (local single-player backend) ─────────────
+#
+# This backend has no login by design: it's the player's own machine and
+# owns only their local save. But it listens on localhost while an ordinary
+# browser is running, and CORS does NOT stop a hostile page from SENDING a
+# cross-origin POST — it only stops that page from READING the response. So
+# any site the player visits could fire state-changing requests at
+# http://localhost:8000 (dismiss heroes, spend gold, wipe a roster) purely
+# blind. Nothing in CORS prevents that.
+#
+# Fix: reject requests carrying an Origin/Referer that isn't ours. Browsers
+# always attach Origin to cross-origin POSTs and cannot forge it, while the
+# game's own webview and the Vite dev server both present allowed origins.
+# Non-browser callers (the game client itself, curl, tests) send no Origin
+# and are unaffected.
+_ALLOWED_LOCAL_ORIGINS = {
+    "http://localhost:8000", "http://127.0.0.1:8000",
+    "http://localhost:5173", "http://127.0.0.1:5173",
+}
+
+
+@app.middleware("http")
+async def _block_foreign_origins(request, call_next):
+    from fastapi.responses import JSONResponse
+    origin = request.headers.get("origin")
+    if origin and origin not in _ALLOWED_LOCAL_ORIGINS:
+        return JSONResponse(
+            {"detail": "Cross-origin requests are not allowed against the local game backend."},
+            status_code=403,
+        )
+    # A cross-site form/navigation POST can omit Origin in some browsers but
+    # still carries a foreign Referer — treat that the same way.
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        referer = request.headers.get("referer")
+        if referer and not any(referer.startswith(o) for o in _ALLOWED_LOCAL_ORIGINS):
+            return JSONResponse(
+                {"detail": "Cross-origin requests are not allowed against the local game backend."},
+                status_code=403,
+            )
+    return await call_next(request)
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=sorted(_ALLOWED_LOCAL_ORIGINS),
     allow_methods=["*"],
     allow_headers=["*"],
 )

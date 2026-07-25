@@ -6,10 +6,20 @@
 #   docker build -t tower-world-server ./arena_server
 #
 # Run (persists arena.db in a named volume, admin actions enabled):
-#   docker run -d --name world-server -p 8001:8001 \
+#
+#   IMPORTANT: publish to LOCALHOST ONLY (127.0.0.1:8001), never `-p 8001:8001`.
+#   A bare `-p 8001:8001` binds 0.0.0.0 and Docker writes its own iptables
+#   DNAT rules that bypass ufw/firewalld, so the API ends up reachable from
+#   the internet in cleartext — around Caddy, its TLS, and its rate limits.
+#
+#   docker run -d --name world-server -p 127.0.0.1:8001:8001 \
 #     -e ARENA_ADMIN_KEY=change-me-to-something-long \
 #     -v world_data:/app/data \
 #     tower-world-server
+#
+#   Then verify from OUTSIDE the box that the port is not exposed:
+#     curl -m 5 http://<public-ip>:8001/    # must fail/refuse
+#     curl -m 5 https://<your-caddy-host>/  # must return the status JSON
 #
 # Then point DEFAULT_ARENA_SERVER_URL (frontend/src/api/arenaServerClient.js)
 # at http://<your-host>:8001 and rebuild the frontend.
@@ -36,4 +46,10 @@ VOLUME ["/app/data"]
 
 EXPOSE 8001
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+# --proxy-headers + --forwarded-allow-ips: Caddy is the only ingress, so
+# trust its X-Forwarded-For. Without this every request looks like it came
+# from the Docker gateway and all clients would share ONE rate-limit bucket
+# (one abuser throttles everybody; nobody is individually limited).
+# 0.0.0.0 here is the CONTAINER interface — host exposure is controlled by
+# the `-p 127.0.0.1:8001:8001` publish spec above.
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--proxy-headers", "--forwarded-allow-ips", "*"]

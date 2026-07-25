@@ -110,7 +110,7 @@ def start_backend():
     # Run uvicorn without --reload so it doesn't spawn child processes that get orphaned
     creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
     return subprocess.Popen(
-        [python_exe, "-m", "uvicorn", "main:app", "--port", "8000"],
+        [python_exe, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"],
         cwd=backend_dir,
         creationflags=creationflags
     )

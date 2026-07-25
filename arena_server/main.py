@@ -12,9 +12,14 @@ import time
 import json
 
 import bcrypt
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+from security import (
+    BodySizeLimitMiddleware, SecurityHeadersMiddleware,
+    client_ip, rate_limit, hash_token, clamp_team,
+)
 
 from database import db, init_db
 from combat import resolve_arena_fight
@@ -46,20 +51,53 @@ MAX_REPORTED_FLOOR = 1000
 # could wipe every player's season.
 ADMIN_KEY = os.environ.get("ARENA_ADMIN_KEY")
 
-# Naive in-memory login throttle: 5 failures locks a username out for 60s.
-# Resets on process restart — fine for the friends-scale v1 this serves.
-_login_failures: dict[str, list] = {}  # username -> [fail_count, lock_until_ts]
-LOGIN_MAX_FAILS = 5
-LOGIN_LOCKOUT_SECONDS = 60
+# Per-account failure counter. Deliberately NOT a hard lockout: locking a
+# username out on failures alone let anyone freeze a known player's account
+# indefinitely (5 bad guesses/minute, forever). Instead failures add delay
+# and the real brute-force ceiling is the per-IP limiter below.
+_login_failures: dict[str, list] = {}  # key -> [fail_count, last_fail_ts]
+LOGIN_FAIL_WINDOW = 15 * 60
+LOGIN_FAIL_SOFT_LIMIT = 10        # per-account failures in the window before extra friction
+
+# Per-IP throttles (sliding windows, see security.rate_limit).
+RL_AUTH = (20, 15 * 60)           # register/login attempts per IP / 15 min
+RL_FIGHT = (30, 10 * 60)          # combat-running endpoints: each runs a full sim
+RL_MARKET = (20, 10 * 60)         # market listing/hiring
+RL_WRITE = (120, 60)              # general authenticated writes
+RL_RAID = (30, 10 * 60)
 
 app = FastAPI(title="Tower of Eternity — Arena Server")
 
+# Order matters: body cap runs OUTERMOST so oversized requests die before
+# anything buffers them.
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(BodySizeLimitMiddleware, max_bytes=256 * 1024)
+
+# The game client is a desktop app (no browser Origin) and auth is a Bearer
+# header, not a cookie — so no site needs cross-origin credentialed access
+# here. Keeping this closed means a random web page can't quietly script the
+# API against a logged-in player's token.
+_ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ARENA_ALLOWED_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+def _throttle(request: Request, bucket: str, spec: tuple[int, int], subject: str | None = None):
+    """Rate-limit one request. Keyed by real client IP (Caddy-aware), and
+    additionally by account where that's the thing being protected."""
+    key = f"{bucket}:{subject or client_ip(request)}"
+    allowed, retry = rate_limit(key, spec[0], spec[1])
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many requests — slow down and retry in {retry}s",
+            headers={"Retry-After": str(retry)},
+        )
 
 
 @app.on_event("startup")
@@ -105,14 +143,36 @@ class UpdateFloorRequest(BaseModel):
 
 def _require_player(authorization: str | None) -> str:
     """Validates the Bearer token from the Authorization header, returns
-    the owning username. Raises 401 on anything wrong."""
+    the owning username. Raises 401 on anything wrong.
+
+    Tokens are stored HASHED (see security.hash_token) so a copy of arena.db
+    no longer yields usable sessions. Legacy plaintext rows are still
+    accepted once and upgraded in place, so deploying this doesn't sign
+    every logged-in player out."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing bearer token")
     token = authorization.removeprefix("Bearer ").strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing bearer token")
+    hashed = hash_token(token)
     with db() as conn:
         row = conn.execute(
-            "SELECT username, token_expiry FROM arena_players WHERE token = ?", (token,)
+            "SELECT username, token_expiry FROM arena_players WHERE token = ?", (hashed,)
         ).fetchone()
+        if not row:
+            # Legacy plaintext rows only. The NOT LIKE guard is essential:
+            # without it, someone holding a stolen DB could paste a stored
+            # digest straight back as a bearer token and be authenticated.
+            legacy = conn.execute(
+                "SELECT username, token_expiry FROM arena_players "
+                "WHERE token = ? AND token NOT LIKE 'v2:%'", (token,)
+            ).fetchone()
+            if legacy:
+                conn.execute(
+                    "UPDATE arena_players SET token = ? WHERE username = ?",
+                    (hashed, legacy["username"]),
+                )
+                row = legacy
     if not row:
         raise HTTPException(status_code=401, detail="Invalid token")
     if row["token_expiry"] is None or row["token_expiry"] < time.time():
@@ -122,12 +182,37 @@ def _require_player(authorization: str | None) -> str:
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+# A real bcrypt hash of a random string, compared against when the account
+# doesn't exist so a miss costs the same time as a wrong password (no
+# timing-based username enumeration).
+_DUMMY_BCRYPT = bcrypt.hashpw(secrets.token_hex(16).encode(), bcrypt.gensalt()).decode()
+
+
+def _record_login(conn, username: str, ip: str) -> None:
+    """Append to the login audit trail (surfaced via /auth/logins) and prune
+    to the last 20 per account. A player seeing an unfamiliar IP is the
+    cheapest account-compromise detector available."""
+    try:
+        conn.execute(
+            "INSERT INTO login_audit (username, ip, at) VALUES (?, ?, ?)",
+            (username, ip[:64], time.time()),
+        )
+        conn.execute(
+            """DELETE FROM login_audit WHERE username = ? AND id NOT IN
+               (SELECT id FROM login_audit WHERE username = ? ORDER BY id DESC LIMIT 20)""",
+            (username, username),
+        )
+    except Exception:
+        pass  # auditing must never block a legitimate login
+
 
 def _issue_token(conn, username: str) -> str:
+    """Mint a session token. The plaintext is returned to the caller exactly
+    once; only its hash is persisted."""
     token = secrets.token_hex(32)
     conn.execute(
         "UPDATE arena_players SET token = ?, token_expiry = ? WHERE username = ?",
-        (token, time.time() + TOKEN_LIFETIME_SECONDS, username),
+        (hash_token(token), time.time() + TOKEN_LIFETIME_SECONDS, username),
     )
     return token
 
@@ -141,9 +226,14 @@ def root_status():
 
 
 @app.post("/auth/register")
-def auth_register(req: AuthRegisterRequest):
+def auth_register(req: AuthRegisterRequest, request: Request):
     """Account creation for the startup login screen: email + display name +
-    password. Issues a session token immediately (register == logged in)."""
+    password. Issues a session token immediately (register == logged in).
+
+    Throttled per IP: free unlimited account creation was the force
+    multiplier behind the training-market payout exploit (mint accounts,
+    farm cross-account rewards)."""
+    _throttle(request, "auth", RL_AUTH)
     email = req.email.strip().lower()
     username = req.username.strip()
     if not EMAIL_RE.match(email):
@@ -167,25 +257,43 @@ def auth_register(req: AuthRegisterRequest):
 
 
 @app.post("/auth/login")
-def auth_login(req: AuthLoginRequest):
-    """Login by email or display name. Same throttle as the legacy endpoint."""
+def auth_login(req: AuthLoginRequest, request: Request):
+    """Login by email or display name.
+
+    Brute-force ceiling is the per-IP limiter (RL_AUTH). Per-account
+    failures add friction but never hard-lock — the previous 60s username
+    lockout meant anyone could keep a known player permanently locked out
+    just by failing five logins a minute against their name."""
+    _throttle(request, "auth", RL_AUTH)
     ident = req.identifier.strip()
     key = ident.lower()
+    ip = client_ip(request)
+
+    # Per-account soft throttle: many recent failures against this one
+    # account also costs the attacker a tighter IP budget.
     entry = _login_failures.get(key)
-    if entry and entry[1] > time.time():
-        raise HTTPException(status_code=429, detail="Too many failed attempts — try again in a minute")
+    now = time.time()
+    if entry and now - entry[1] > LOGIN_FAIL_WINDOW:
+        entry = None
+    if entry and entry[0] >= LOGIN_FAIL_SOFT_LIMIT:
+        _throttle(request, "auth_hot", (5, LOGIN_FAIL_WINDOW))
+
     with db() as conn:
         row = conn.execute(
             "SELECT username, email, password_hash FROM arena_players WHERE email = ? OR username = ?",
             (key, ident),
         ).fetchone()
-        if not row or not bcrypt.checkpw(req.password.encode(), row["password_hash"].encode()):
-            fails = (_login_failures.get(key) or [0, 0])[0] + 1
-            lock_until = time.time() + LOGIN_LOCKOUT_SECONDS if fails >= LOGIN_MAX_FAILS else 0
-            _login_failures[key] = [0 if lock_until else fails, lock_until]
+        # Constant-ish work whether or not the account exists, so response
+        # timing doesn't cleanly enumerate valid usernames/emails.
+        stored = row["password_hash"] if row else _DUMMY_BCRYPT
+        ok = bcrypt.checkpw(req.password.encode(), stored.encode())
+        if not row or not ok:
+            prior = (_login_failures.get(key) or [0, 0])[0]
+            _login_failures[key] = [prior + 1, now]
             raise HTTPException(status_code=401, detail="Invalid credentials")
         _login_failures.pop(key, None)
         token = _issue_token(conn, row["username"])
+        _record_login(conn, row["username"], ip)
     return {"token": token, "username": row["username"], "email": row["email"]}
 
 
@@ -223,7 +331,11 @@ def auth_google():
 
 
 @app.post("/arena/register")
-def register(req: RegisterRequest):
+def register(req: RegisterRequest, request: Request):
+    """Legacy username+password registration (pre-dates /auth/register).
+    Same per-IP throttle — unlimited free accounts is what makes every
+    cross-account economy exploit scalable."""
+    _throttle(request, "auth", RL_AUTH)
     username = req.username.strip()
     if not username or not req.password:
         raise HTTPException(status_code=400, detail="Username and password are required")
@@ -246,63 +358,92 @@ def register(req: RegisterRequest):
 
 
 @app.post("/arena/login")
-def login(req: LoginRequest):
+def login(req: LoginRequest, request: Request):
+    """Legacy username-only login. Shares the hardened path: per-IP throttle,
+    constant-time miss, token hashed at rest, audit trail. (It previously
+    minted a PLAINTEXT token inline, bypassing _issue_token entirely.)"""
+    _throttle(request, "auth", RL_AUTH)
     uname = req.username.strip()
+    key = uname.lower()
+    ip = client_ip(request)
+    now = time.time()
 
-    # Throttle brute-force attempts per username.
-    entry = _login_failures.get(uname)
-    if entry and entry[1] > time.time():
-        raise HTTPException(status_code=429, detail="Too many failed attempts — try again in a minute")
+    entry = _login_failures.get(key)
+    if entry and now - entry[1] > LOGIN_FAIL_WINDOW:
+        entry = None
+    if entry and entry[0] >= LOGIN_FAIL_SOFT_LIMIT:
+        _throttle(request, "auth_hot", (5, LOGIN_FAIL_WINDOW))
 
     with db() as conn:
         row = conn.execute(
             "SELECT username, password_hash FROM arena_players WHERE username = ?",
             (uname,),
         ).fetchone()
-        if not row or not bcrypt.checkpw(req.password.encode(), row["password_hash"].encode()):
-            fails = (_login_failures.get(uname) or [0, 0])[0] + 1
-            lock_until = time.time() + LOGIN_LOCKOUT_SECONDS if fails >= LOGIN_MAX_FAILS else 0
-            _login_failures[uname] = [0 if lock_until else fails, lock_until]
+        stored = row["password_hash"] if row else _DUMMY_BCRYPT
+        ok = bcrypt.checkpw(req.password.encode(), stored.encode())
+        if not row or not ok:
+            prior = (_login_failures.get(key) or [0, 0])[0]
+            _login_failures[key] = [prior + 1, now]
             raise HTTPException(status_code=401, detail="Invalid username or password")
-        _login_failures.pop(uname, None)
-        token = secrets.token_hex(32)
-        expiry = time.time() + TOKEN_LIFETIME_SECONDS
-        conn.execute(
-            "UPDATE arena_players SET token = ?, token_expiry = ? WHERE username = ?",
-            (token, expiry, row["username"]),
-        )
+        _login_failures.pop(key, None)
+        token = _issue_token(conn, row["username"])
+        _record_login(conn, row["username"], ip)
     return {"token": token, "username": row["username"]}
 
 
+@app.get("/auth/logins")
+def auth_logins(authorization: str | None = Header(default=None)):
+    """The caller's own recent sign-ins (time + IP). Surfacing this is how a
+    player notices a session they didn't create."""
+    username = _require_player(authorization)
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT ip, at FROM login_audit WHERE username = ? ORDER BY id DESC LIMIT 20",
+            (username,),
+        ).fetchall()
+    return {"logins": [dict(r) for r in rows]}
+
+
 @app.post("/arena/submit_team")
-def submit_team(req: SubmitTeamRequest, authorization: str | None = Header(default=None)):
+def submit_team(req: SubmitTeamRequest, request: Request,
+                authorization: str | None = Header(default=None)):
     """Stores the caller's current best team snapshot — the team an
     opponent's challenge will be resolved against. The client computes this
     snapshot exactly as it already does for a normal Tower floor; the
     server does no stat recomputation (see the known-risk note in combat.py
     / the arena plan: a modified client could inflate stats — accepted
     for a friends-scale v1)."""
-    if not req.team:
-        raise HTTPException(status_code=400, detail="Team cannot be empty")
-    if len(req.team) > MAX_TEAM_SIZE:
-        raise HTTPException(status_code=400, detail=f"Teams are at most {MAX_TEAM_SIZE} heroes")
-    if not all(isinstance(h, dict) for h in req.team):
-        raise HTTPException(status_code=400, detail="Malformed team payload")
-    payload = json.dumps(req.team)
+    username = _require_player(authorization)
+    _throttle(request, "write", RL_WRITE)
+    # Snapshots are client-computed (this server has no access to any save —
+    # see combat.py), so they get normalized and bounded before they can
+    # reach the shared combat engine: finite numbers, sane magnitudes, and a
+    # bounded skill payload. Cheating a ladder is a tolerated tradeoff;
+    # crashing or amplifying against the shared server is not.
+    try:
+        team = clamp_team(req.team, MAX_TEAM_SIZE)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    payload = json.dumps(team)
     if len(payload.encode()) > MAX_TEAM_JSON_BYTES:
         raise HTTPException(status_code=400, detail="Team payload too large")
-    username = _require_player(authorization)
     with db() as conn:
         conn.execute(
             "UPDATE arena_players SET team_json = ? WHERE username = ?",
             (payload, username),
         )
-    return {"status": "team submitted", "team_size": len(req.team)}
+    return {"status": "team submitted", "team_size": len(team)}
 
 
 @app.post("/arena/challenge")
-def challenge(req: ChallengeRequest, authorization: str | None = Header(default=None)):
+def challenge(req: ChallengeRequest, request: Request,
+              authorization: str | None = Header(default=None)):
     username = _require_player(authorization)
+    # Each call runs a FULL combat simulation and moves ELO/wins/guild-war
+    # score. Unlimited, that was both a CPU tap on the shared server and an
+    # infinite ladder-farm (challenge the same weak opponent forever).
+    _throttle(request, "fight", RL_FIGHT)
+    _throttle(request, "fight_user", RL_FIGHT, subject=username)
     opponent = req.opponent.strip()
     if opponent == username:
         raise HTTPException(status_code=400, detail="You can't challenge yourself")
@@ -359,8 +500,10 @@ def challenge(req: ChallengeRequest, authorization: str | None = Header(default=
 
 
 @app.post("/arena/matchmake")
-def matchmake(authorization: str | None = Header(default=None)):
+def matchmake(request: Request, authorization: str | None = Header(default=None)):
     username = _require_player(authorization)
+    _throttle(request, "fight", RL_FIGHT)
+    _throttle(request, "fight_user", RL_FIGHT, subject=username)
     with db() as conn:
         me = conn.execute("SELECT wins, losses, elo, team_json FROM arena_players WHERE username = ?", (username,)).fetchone()
         if not me or not me["team_json"]:
@@ -435,8 +578,10 @@ def my_matches(limit: int = 10, authorization: str | None = Header(default=None)
 
 
 @app.post("/arena/update_floor")
-def update_floor(req: UpdateFloorRequest, authorization: str | None = Header(default=None)):
+def update_floor(req: UpdateFloorRequest, request: Request,
+                 authorization: str | None = Header(default=None)):
     username = _require_player(authorization)
+    _throttle(request, "write", RL_WRITE)
     # Client-authoritative by design (the server can't verify a local climb),
     # but at least clamp to the game's actual floor range so the PvE
     # leaderboard can't display a 9-digit floor.
@@ -1126,8 +1271,10 @@ class ListTeacherRequest(BaseModel):
     gem_cost: int
 
 @app.post("/arena/market/list")
-def list_teacher(req: ListTeacherRequest, authorization: str | None = Header(default=None)):
+def list_teacher(req: ListTeacherRequest, request: Request,
+                 authorization: str | None = Header(default=None)):
     username = _require_player(authorization)
+    _throttle(request, "market", RL_MARKET)
     if req.gem_cost < 0 or req.gem_cost > MAX_GEM_COST:
         raise HTTPException(status_code=400, detail=f"Gem cost must be 0-{MAX_GEM_COST}.")
     if len(req.hero_name) > 40 or len(req.hero_class) > 40:
@@ -1170,26 +1317,74 @@ def get_training_market(authorization: str | None = Header(default=None)):
 class HireTeacherRequest(BaseModel):
     listing_id: int
 
+# Training-market payout guardrails. This endpoint MINTS premium currency
+# (gem rows in the reward inbox, which the game claims into a real save), so
+# every one of these limits is load-bearing:
+#   - one paid hire per (hirer, listing), enforced by a UNIQUE key
+#   - a daily payout ceiling per listing, so one popular teacher can't be
+#     farmed by a crowd of throwaway accounts
+#   - hirers must be established accounts, not minutes-old registrations
+MARKET_PAYOUTS_PER_LISTING_PER_DAY = 5
+MARKET_HIRER_MIN_FLOOR = 5
+
+
 @app.post("/arena/market/hire")
-def hire_teacher(req: HireTeacherRequest, authorization: str | None = Header(default=None)):
+def hire_teacher(req: HireTeacherRequest, request: Request,
+                 authorization: str | None = Header(default=None)):
     username = _require_player(authorization)
+    _throttle(request, "market", RL_MARKET)
+    _throttle(request, "market_user", RL_MARKET, subject=username)
+    now = time.time()
     with db() as conn:
         listing = conn.execute("SELECT * FROM training_market WHERE id = ?", (req.listing_id,)).fetchone()
         if not listing:
             raise HTTPException(status_code=404, detail="Listing not found.")
-            
         if listing["username"] == username:
             raise HTTPException(status_code=400, detail="You cannot hire your own teacher.")
-            
-        # Payout the lister! We use the season rewards table as a generic inbox for now.
-        if listing["gem_cost"] > 0:
+
+        already = conn.execute(
+            "SELECT 1 FROM market_hires WHERE listing_id = ? AND hirer = ?",
+            (req.listing_id, username),
+        ).fetchone()
+
+        # The teacher's knowledge is re-deliverable (the client already paid
+        # locally the first time) — but the LISTER is only ever paid once per
+        # hirer, and only within the daily ceiling.
+        pay = False
+        if not already and listing["gem_cost"] > 0:
+            me = conn.execute(
+                "SELECT highest_floor FROM arena_players WHERE username = ?", (username,)
+            ).fetchone()
+            if (me["highest_floor"] or 0) < MARKET_HIRER_MIN_FLOOR:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Reach floor {MARKET_HIRER_MIN_FLOOR} before hiring from the market.",
+                )
+            paid_today = conn.execute(
+                "SELECT COUNT(*) AS c FROM market_hires WHERE listing_id = ? AND at > ?",
+                (req.listing_id, now - 86400),
+            ).fetchone()["c"]
+            if paid_today >= MARKET_PAYOUTS_PER_LISTING_PER_DAY:
+                raise HTTPException(
+                    status_code=429,
+                    detail="This teacher has taken on all the students they can today.",
+                )
+            pay = True
+
+        if not already:
+            conn.execute(
+                "INSERT OR IGNORE INTO market_hires (listing_id, hirer, at) VALUES (?, ?, ?)",
+                (req.listing_id, username, now),
+            )
+        if pay:
             conn.execute(
                 "INSERT INTO arena_season_rewards (username, season_end_date, reward_type, amount) VALUES (?, ?, ?, ?)",
-                (listing["username"], time.time(), "gems", listing["gem_cost"])
+                (listing["username"], now, "gems", min(int(listing["gem_cost"]), MAX_GEM_COST)),
             )
-            
+
     return {
-        "status": "hired", 
+        "status": "hired",
+        "already_hired": bool(already),
         "teacher": {
             "hero_name": listing["hero_name"],
             "hero_class": listing["hero_class"],
