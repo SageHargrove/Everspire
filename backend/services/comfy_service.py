@@ -140,7 +140,7 @@ def _build_workflow(prompt: str, negative: str = "", seed: int = None, init_imag
             "class_type": "VAEDecode"
         },
         "9": {
-            "inputs": {"filename_prefix": "infinite_gacha", "images": ["8", 0]},
+            "inputs": {"filename_prefix": "everspire", "images": ["8", 0]},
             "class_type": "SaveImage"
         }
     }
@@ -517,15 +517,48 @@ def ensure_comfy_running() -> bool:
         return False
     try:
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-        subprocess.Popen([py, "-s", os.path.join(cand, "main.py"), "--listen", "127.0.0.1",
-                          "--port", COMFY_URL.rsplit(":", 1)[-1]],
-                         cwd=cand, creationflags=flags,
-                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        proc = subprocess.Popen([py, "-s", os.path.join(cand, "main.py"), "--listen", "127.0.0.1",
+                                 "--port", COMFY_URL.rsplit(":", 1)[-1]],
+                                cwd=cand, creationflags=flags,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        global _LAUNCHED_PROC
+        _LAUNCHED_PROC = proc
         print(f"[ComfyUI] Auto-started from {cand} (warming up).")
         return True
     except Exception as e:
         print(f"[ComfyUI] Auto-start failed: {e}")
         return False
+
+
+# Only ever holds a ComfyUI WE started. A ComfyUI the player launched
+# themselves stays None here and is never touched on shutdown.
+_LAUNCHED_PROC = None
+
+
+def shutdown_comfy():
+    """Stop the ComfyUI we auto-started, if any.
+
+    Matters most in the packaged build: there the backend runs as a thread
+    inside the launcher process, so closing the game window used to leave an
+    orphaned ComfyUI sitting on ~7GB of VRAM — squarely in the way of the
+    next thing the player opens, which for this audience is a game. Killing
+    the tree (not just the PID) because the portable build's python.exe is a
+    stub that re-launches the real interpreter as a child.
+    """
+    global _LAUNCHED_PROC
+    proc = _LAUNCHED_PROC
+    _LAUNCHED_PROC = None
+    if proc is None or proc.poll() is not None:
+        return
+    import subprocess as _sp
+    try:
+        if os.name == "nt":
+            _sp.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)],
+                    capture_output=True, creationflags=_sp.CREATE_NO_WINDOW)
+        else:
+            proc.terminate()
+    except Exception as e:
+        print(f"[ComfyUI] Shutdown failed (pid {proc.pid}): {e}")
 
 
 def _upload_image(file_path: str) -> str | None:

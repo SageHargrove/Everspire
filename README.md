@@ -1,4 +1,4 @@
-# Tower of Eternity
+# Everspire
 
 A roguelike tower-climbing gacha RPG. You are the manager. Heroes die permanently.
 
@@ -11,34 +11,101 @@ positioning, gear, class synergy, morale, and a hero's personality (their
 
 ## Playtest — Send This to Friends
 
-**To play (no coding needed):**
+**To play (no Python, no coding, nothing to configure):**
 
-1. Install **Python 3.11 or newer** from [python.org](https://www.python.org/downloads/) — during setup, **check "Add Python to PATH."**
-2. Download this repo: green **`Code`** button above → **Download ZIP** → extract it anywhere.
-3. Double-click **`PLAY.bat`**. The first run installs things for a few minutes, then the game opens in your browser at `http://localhost:8000`.
-4. At the title screen, **make an account** — please use a **throwaway password**, not one you use elsewhere. Multiplayer (PvP, leaderboards) connects automatically.
+1. Download **`Everspire-Setup.exe`** from the [Releases](../../releases) page.
+2. Run it. Windows will warn that it's unsigned: **More info → Run anyway**.
+   (Signing costs a few hundred a year; this is a playtest.) It installs
+   per-user — **no admin rights, no UAC prompt** — and makes Start Menu and
+   desktop shortcuts.
+3. Launch **Everspire** from the Start Menu or desktop.
+4. At the title screen, **make an account** — please use a **throwaway
+   password**, not one you use elsewhere. Multiplayer connects automatically.
 
-That's it — you play on the built-in art. Everyone shares the same world server for multiplayer.
+There's also a plain **`Everspire-playtest.zip`** if you'd rather not install
+anything: extract the whole folder and run `Everspire.exe` from inside it.
 
-**Optional — generate your own unique heroes (needs an NVIDIA GPU, ~12GB free disk):**
+That's it. You play on the built-in art, and everyone shares one world server.
 
-1. Double-click **`INSTALL_GENERATION.bat`** once — it downloads the AI art tools and models (~9GB, resume-safe if interrupted).
-2. Launch with `PLAY.bat`, then enter **any API key** in the tutorial or **Settings → AI Generation**. Your summons will now roll brand-new heroes in the game's art style instead of the shared gallery.
+**Optional — better text.** Hero names, backstories, and banter are written by
+Claude. Without a key you get pre-written text instead; everything else is
+identical. To turn it on, paste an [Anthropic API key](https://console.anthropic.com)
+into **Settings → AI**. It's stored locally and only ever sent to Anthropic.
 
-No NVIDIA GPU? Skip this — the game plays fine on the built-in art.
+**Optional — your own unique hero art (needs an NVIDIA GPU, ~12GB free disk):**
+
+1. Run **`INSTALL_GENERATION.bat`** once — downloads ComfyUI, the art model,
+   and the game's style LoRAs (~9GB, resume-safe if interrupted).
+2. Start the game and switch ON **Hero Portrait Generation** under
+   **Settings → AI**. Summons now roll heroes nobody else will ever have.
+
+The generator starts and stops with the game from then on. No NVIDIA GPU? Skip
+it — nothing else changes.
+
+**Updating.** Saves live in `backend/saves/` and generated art in
+`backend/static/portraits/`. Extract a new build over the old folder and keep
+those two; everything else is replaceable.
+
+---
+
+## Building the Player Download
+
+```bash
+cd frontend && npm run build && cd ..                      # UI must be current
+backend\venv\Scripts\python -m PyInstaller Everspire.spec --noconfirm
+backend\venv\Scripts\python tools\make_release.py          # -> stage + .zip
+"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" tools\everspire.iss   # -> Setup.exe
+```
+
+That produces `release/Everspire/` (~1.1GB), `release/Everspire-playtest.zip`
+(993MB) and `release/Everspire-Setup.exe` (923MB) — upload the last two to the
+Releases page. Note the **module form** (`python -m PyInstaller`) — the
+`pyinstaller.exe` shim in the venv hardcodes the pre-rename interpreter path and
+fails silently with exit 1.
+
+The installer is **per-user by design** (`PrivilegesRequired=lowest`,
+`{autopf}` → `%LOCALAPPDATA%\Programs\Everspire`). That's not just to dodge the
+UAC prompt: the game keeps saves and generated portraits *next to itself*, and
+a Program Files install would put those in a directory the player can't write
+to. Uninstalling removes everything the installer laid down and deliberately
+leaves save data behind, so reinstalling picks a roster back up.
+
+Two deliberate choices in that layout:
+
+- **The exe stays small (~160MB) and game content sits *beside* it**, not frozen
+  inside. That's what makes an update a drop-in replace of `Everspire.exe` +
+  `_internal/` while a player's saves and generated portraits survive.
+- **`make_release.py` picks backend files via `git ls-files`**, so gitignored
+  things — `backend/.env` above all — cannot reach a release by accident. It
+  also refuses to zip a stage folder that's been launched (a smoke-test run
+  leaves a save DB and a WebView2 profile behind).
+
+Because the backend is loaded as loose source rather than frozen, PyInstaller
+can't see its imports: every third-party module it touches is declared by hand
+in `Everspire.spec`. A `ModuleNotFoundError` in the packaged build almost always
+means adding a package there — `collect_submodules`, not a bare name, for
+anything imported as `pkg.sub`.
 
 ---
 
 ## Running It (Development)
 
-**To just play** (packaged flow), use `PLAY.bat` — see the Playtest section
-above. `app_launcher.py` is the older one-step desktop launcher (backend +
-ComfyUI + a native window via PyInstaller specs) and still works if you
-prefer a windowed build:
+`app_launcher.py` is the one-step launcher and runs in two modes from the same
+file. From source it git-pulls, rebuilds the frontend, and starts uvicorn as a
+subprocess out of `backend/venv`:
 
 ```
 python app_launcher.py
 ```
+
+Frozen (the build players download) it does none of that — there's no git
+checkout, no Node, and no venv on a player's machine — and instead imports the
+backend and runs uvicorn **in-process**. It no longer launches ComfyUI itself
+either; the backend does that on startup via `comfy_service.ensure_comfy_running()`,
+which honours the `COMFYUI_DIR` that `INSTALL_GENERATION.bat` sets.
+
+`PLAY.bat` is still there as the bare-bones path (venv bootstrap + uvicorn, no
+window) if you want the game in a normal browser tab.
 
 The backend serves the frontend's built `dist/` directly, so if you've
 changed any frontend code, rebuild it first:
@@ -182,10 +249,12 @@ cd arena_server && python test_security.py
 ## Repository Layout
 
 ```
-PLAY.bat                      # Player launcher — venv bootstrap + game at localhost:8000
+app_launcher.py               # The launcher — dev mode (subprocess) + frozen mode (in-process)
+Everspire.spec                # PyInstaller onedir build; deps declared by hand
+tools/make_release.py         # Assembles + zips release/Everspire/ for the Releases page
+PLAY.bat                      # Bare-bones path — venv bootstrap + game at localhost:8000
 INSTALL_GENERATION.bat        # Optional: local AI hero generation (NVIDIA GPU)
 generation/loras/             # Hero style models (git LFS) pulled by the installer
-app_launcher.py               # Older one-step desktop launcher (backend + ComfyUI + window)
 Dockerfile                    # Container build for the single-player backend
 docs/                         # Design/plan documents + SECURITY.md
 openspec/                     # Feature specs (openspec workflow) + backlog

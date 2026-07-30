@@ -1185,7 +1185,18 @@ def make_game_cutout(path: str, mode: str = "auto") -> bool:
                 print(f"[Cutout] void method errored for {path}: {e}")
 
         # ── fallback: rembg + ghost-kill ──
-        rgba = np.asarray(_rembg_remove(im)).copy()
+        # rembg is optional and NOT in the packaged build (it drags in
+        # onnxruntime, ~200MB, for a path only non-void backdrops reach —
+        # ComfyUI's toe_rembg node does the cutting on the generation side).
+        # The wrapper above already documents rembg-missing as a soft failure,
+        # so honour that here instead of raising ModuleNotFoundError up
+        # through a background worker: returning False leaves the portrait on
+        # its black bg, recoverable later via recut_from_master().
+        try:
+            rgba = np.asarray(_rembg_remove(im)).copy()
+        except ImportError:
+            print(f"[Cutout] rembg unavailable — leaving {path} uncut.")
+            return False
         a = rgba[:, :, 3].astype(np.float32)
         lum = rgba[:, :, :3].max(axis=2).astype(np.float32)
         ghost = (a < 210) & (lum < 70)
