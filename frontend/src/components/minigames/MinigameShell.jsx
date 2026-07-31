@@ -11,7 +11,12 @@
  *
  * Usage:
  *  <MinigameShell title="STRIKE THE STEEL" onResolve={(mult) => craft(mult)}
- *    onSkip={() => craft(1.0)} game={(difficulty, onDone) => <ForgeTiming .../>} />
+ *    onSkip={(mult) => craft(mult)} heroStar={smith.birth_star} heroName={smith.name}
+ *    game={(difficulty, onDone) => <ForgeTiming .../>} />
+ *
+ *  onSkip is HANDED the assigned hero's baseline — it is no longer a flat 1.0.
+ *  Omitting heroStar falls back to 1.0, so an un-migrated caller keeps its
+ *  old behaviour rather than breaking.
  *
  * The child game reports a raw SCORE 0..1; the shell converts it to the
  * final multiplier: baseline + (ceiling - baseline) * score, where a
@@ -33,7 +38,32 @@ export const DIFFICULTIES = [
   { key: 'master',     label: 'MASTER',     desc: 'the Tower is watching', floor: 0.6,  ceil: 2.4 },
   { key: 'legendary',  label: 'LEGENDARY',  desc: 'perfection — or the work is RUINED', floor: 0.3, ceil: 3.0, ruin: 0.2 },
 ]
-export const AUTO_RESOLVE_MULT = 1.0  // skipping = a clean NOVICE run
+export const AUTO_RESOLVE_MULT = 1.0  // legacy default when no hero is assigned
+
+// ── the hero's own hands ────────────────────────────────────────────────────
+//
+// Skipping used to be a flat ×1.0 no matter who was assigned, so a 1-star and
+// a 7-star Blacksmith produced identical work the moment you declined to play.
+// The star now sets the BASELINE — what that hero achieves unsupervised.
+//
+// The ceiling is untouched and stays player-only. A 7-star gives you a high
+// floor that is genuinely hard to beat, but LEGENDARY's ×3 is not reachable by
+// any hero at any rarity — that tier is for the player, permanently, and can't
+// be power-crept away by rarity. Recruiting well buys you a good result;
+// only you can buy a great one.
+export const HERO_BASELINE_BY_STAR = {
+  1: 0.85,   // barely competent — taking over is almost always worth it
+  2: 0.95,
+  3: 1.05,
+  4: 1.15,
+  5: 1.30,
+  6: 1.45,
+  7: 1.60,   // genuinely good — you need ADEPT+ and a clean run to beat them
+}
+
+export function heroBaseline(star) {
+  return HERO_BASELINE_BY_STAR[star] ?? AUTO_RESOLVE_MULT
+}
 
 // score 0..1 -> reward multiplier. On tiers with a `ruin` threshold, a score
 // below it returns 0 — the caller treats 0 as CATASTROPHE (work destroyed).
@@ -44,7 +74,12 @@ export function scoreToMult(diff, score) {
   return Math.round((d.floor + (d.ceil - d.floor) * s) * 100) / 100
 }
 
-export default function MinigameShell({ title, flavor, onResolve, onSkip, game }) {
+export default function MinigameShell({ title, flavor, onResolve, onSkip, game,
+                                        heroStar = null, heroName = null }) {
+  // What the assigned hero manages alone. Falls back to the old flat baseline
+  // when a caller hasn't been taught to pass a hero yet, so nothing breaks
+  // while the facilities are migrated one at a time.
+  const baseline = heroStar ? heroBaseline(heroStar) : AUTO_RESOLVE_MULT
   const [phase, setPhase] = useState('pick')   // pick -> play -> done
   const [diff, setDiff] = useState('adept')
   const [result, setResult] = useState(null)
@@ -73,13 +108,20 @@ export default function MinigameShell({ title, flavor, onResolve, onSkip, game }
                   <span style={{ fontFamily: "'Cinzel',serif", fontWeight: 700, letterSpacing: '.16em', fontSize: 12, color: diff === d.key ? 'var(--gold-hi)' : 'var(--text-dim)', width: 110 }}>{d.label}</span>
                   <span style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--muted)', flex: 1 }}>{d.desc}</span>
                   <span style={{ fontFamily: "'Cinzel',serif", fontSize: 10, letterSpacing: '.1em', color: d.ceil > 1.1 ? 'var(--gold-hi)' : 'var(--muted)' }}>UP TO ×{d.ceil}</span>
+                  {/* A tier that can't beat the assigned hero is worth saying
+                      out loud — otherwise you take over, play well, and are
+                      quietly worse off than doing nothing. */}
+                  {d.ceil <= baseline && (
+                    <span title="This hero already does better than this tier's best outcome"
+                      style={{ fontFamily: "'Cinzel',serif", fontSize: 9, letterSpacing: '.1em', color: 'var(--red-hi)' }}>BELOW THEM</span>
+                  )}
                 </button>
               ))}
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
               <button className="btn" style={{ flex: 1, padding: '11px 0', fontFamily: "'Cinzel',serif", letterSpacing: '.18em', border: '1px solid rgba(150,110,230,.45)', color: '#cdbfe4', background: 'none', cursor: 'pointer' }}
-                onClick={onSkip}>
-                LET THE HANDS WORK · ×{AUTO_RESOLVE_MULT.toFixed(1)}
+                onClick={() => onSkip(baseline)}>
+                {heroName ? `LET ${heroName.toUpperCase()} WORK` : 'LET THE HANDS WORK'} · ×{baseline.toFixed(2)}
               </button>
               <button className="btn btn-primary" style={{ flex: 1, padding: '11px 0', letterSpacing: '.18em' }} onClick={() => setPhase('play')}>
                 TAKE OVER

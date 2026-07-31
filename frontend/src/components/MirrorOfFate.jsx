@@ -102,7 +102,7 @@ export default function MirrorOfFate({ level, gold, onGoldChange }) {
         <MinigameShell
           title="READ THE GLASS"
           flavor={`The Mirror will show ${selected.name}'s truth — for a price the reading itself decides. A clean read pays a fraction; a clouded one pays for nothing.`}
-          onSkip={() => doReveal(AUTO_RESOLVE_MULT)}
+          onSkip={(mult) => doReveal(mult)}
           onResolve={(mult) => doReveal(mult)}
           game={(difficulty, onDone) => <MirrorGlimpse difficulty={difficulty} onDone={onDone} />}
         />

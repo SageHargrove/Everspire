@@ -117,10 +117,12 @@ export default function AuthGate({ onEnter }) {
         <div className="ilm-diamond" style={{ width: 44, height: 44, margin: '0 auto', boxShadow: '0 0 24px rgba(184,151,98,.4)', background: 'rgba(10,7,19,.6)' }}>
           <div className="pip" style={{ width: 14, height: 14 }} />
         </div>
-        <div className="ilm-title-kicker">TOWER&nbsp;OF</div>
         <div className="ilm-title-stackword">
-          <span className="ghost">ETERNITY</span>
-          <span className="solid">ETERNITY</span>
+          {/* ghost deliberately differs from the solid word — the faded echo
+              beneath the title. (Same-word echo read as a duplicate once the
+              title became one word.) */}
+          <span className="ghost">ASCEND</span>
+          <span className="solid">EVERSPIRE</span>
         </div>
         <div className="ilm-title-tagline">
           <span className="rule" /><span>Heroes die. Legacies do not.</span><span className="rule" />
@@ -213,7 +215,7 @@ export default function AuthGate({ onEnter }) {
           </>
         )}
 
-        <div className="ilm-title-version">TOWER OF ETERNITY · PRE-ALPHA</div>
+        <div className="ilm-title-version">EVERSPIRE · PRE-ALPHA</div>
       </div>
     </div>
   )

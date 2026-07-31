@@ -76,7 +76,7 @@ export function CookingPanel({ onResourceChange }) {
         <MinigameShell
           title="SEASON THE POT"
           flavor="The recipe is old and exact. Take the ladle yourself, or let the kitchen keep its rhythm."
-          onSkip={() => doCook(minigameId, AUTO_RESOLVE_MULT)}
+          onSkip={(mult) => doCook(minigameId, mult)}
           onResolve={(mult) => doCook(minigameId, mult)}
           game={(difficulty, onDone) => <CookSequence difficulty={difficulty} onDone={onDone} />}
         />
@@ -124,7 +124,7 @@ export function RefineAetherPanel({ onResourceChange }) {
         <MinigameShell
           title="THE STILL"
           flavor="Raw mana wants to be anything but Aether. Take the valves yourself, or trust the Lab's steady simmer."
-          onSkip={() => doRefine(minigameBatches, AUTO_RESOLVE_MULT)}
+          onSkip={(mult) => doRefine(minigameBatches, mult)}
           onResolve={(mult) => doRefine(minigameBatches, mult)}
           game={(difficulty, onDone) => <StillControl difficulty={difficulty} onDone={onDone} />}
         />
@@ -161,7 +161,7 @@ export function ShrineRitePanel({ onResourceChange }) {
         <MinigameShell
           title="TRACE THE SIGIL"
           flavor="The old pattern waits in the dark. Trace it true, or let the clergy murmur through the standard observance."
-          onSkip={() => doRite(AUTO_RESOLVE_MULT)}
+          onSkip={(mult) => doRite(mult)}
           onResolve={(mult) => doRite(mult)}
           game={(difficulty, onDone) => <SigilTrace difficulty={difficulty} onDone={onDone} />}
         />
@@ -213,7 +213,7 @@ export function BestiaryPanel() {
         <MinigameShell
           title="THE HUNT"
           flavor="Something big has been leaving tracks near the base. Read the brush yourself, or let the keepers set the ordinary snares."
-          onSkip={() => doHunt(AUTO_RESOLVE_MULT)}
+          onSkip={(mult) => doHunt(mult)}
           onResolve={(mult) => doHunt(mult)}
           game={(difficulty, onDone) => <HuntGrid difficulty={difficulty} onDone={onDone} />}
         />

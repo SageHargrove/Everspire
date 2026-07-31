@@ -181,7 +181,7 @@ export default function Expeditions({ onClose }) {
         <MinigameShell
           title="THE HELM"
           flavor="The hull strains at its moorings. Take the wheel through the departure lanes yourself, or let the crew sail her out."
-          onSkip={() => doLaunch(AUTO_RESOLVE_MULT)}
+          onSkip={(mult) => doLaunch(mult)}
           onResolve={(mult) => doLaunch(mult)}
           game={(difficulty, onDone) => <HelmGates difficulty={difficulty} onDone={onDone} />}
         />
