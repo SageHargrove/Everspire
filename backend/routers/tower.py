@@ -279,6 +279,18 @@ def _resolve_real_combat(conn, hero_teams, floor_number, is_boss, is_miniboss, z
         for d in combat_result["dead_heroes"]
     ]
 
+    # Trust. Affinity used to be purely bought — gifts, the Sanctum, base
+    # activities and training all added, nothing ever subtracted, so a manager
+    # who lost people every floor stayed universally adored as long as they
+    # kept handing out presents. Outcomes move it too now: survivors gain,
+    # and every living hero loses when someone doesn't come back, because
+    # everyone hears about it. Applied here, alongside the other survivor
+    # effects that commit instantly — the DEATH itself is still deferred to
+    # the reveal, but the roster's reaction to the loss is not a spoiler.
+    from services.loyalty_service import apply_floor_trust
+    _wiped = not combat_result.get("surviving_heroes")
+    apply_floor_trust(conn, combat_result.get("surviving_heroes", []), dead_ids, _wiped)
+
     # Survival logic: Survivor's Guilt & Bonds
     if dead_ids:
         # Was this a near-wipe? If >= 3 heroes died in this battle...

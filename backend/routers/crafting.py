@@ -126,8 +126,14 @@ def craft_premade(req: PremadeCraftReq):
             "str_pct": 0.0, "int_pct": 0.0, "hlt_pct": 0.0, "agi_pct": 0.0, "def_pct": 0.0, "end_pct": 0.0, "wil_pct": 0.0, "luck_pct": 0.0, "regen_pct": 0.0
         }
         
+        # Stamp the maker. Only forged gear carries this — it's what lets a
+        # legendary piece credit the smith later, from wherever it ends up.
+        equip["crafted_by"] = req.crafter_id
         equip_id = save_equipment(equip, conn)
         equip["id"] = equip_id
+
+        from services.deeds_service import record_craft_deed
+        record_craft_deed(conn, req.crafter_id, equip["name"], equip.get("rarity"))
 
     from services.quests_service import bump as bump_rite
     bump_rite("craft")
@@ -158,8 +164,12 @@ def craft_creative(req: CreativeCraftReq):
         equip, recipe_name, recipe_desc = generate_creative_craft(req.description, req.materials, power_pool, crafter["level"])
         
         # Save Equipment
+        equip["crafted_by"] = req.crafter_id
         equip_id = save_equipment(equip, conn)
         equip["id"] = equip_id
+
+        from services.deeds_service import record_craft_deed
+        record_craft_deed(conn, req.crafter_id, equip.get("name", "a nameless work"), equip.get("rarity"))
         
         # Save Recipe
         conn.execute(

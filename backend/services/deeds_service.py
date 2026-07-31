@@ -125,6 +125,66 @@ def record_deeds(conn, result: dict, floor_number: int, is_boss: bool, is_minibo
         return []
 
 
+# ── Deeds away from the Tower ───────────────────────────────────────────────
+#
+# Everything above mines combat, which meant a hero's permanent record could
+# only ever be a list of battles. A Blacksmith who never left the base died
+# with an empty Memorial page no matter how long they'd served — the ledger
+# had no way to say who someone WAS, only what they killed.
+#
+# These are deliberately rarer than combat deeds. A deed has to be earned, and
+# "cooked a meal" is not a life event; the thresholds below are set so a base
+# deed marks a peak, not a shift at work.
+
+def record_base_deed(conn, hero_id: int, text: str, floor_number: int = None) -> dict | None:
+    """Write one non-combat deed. Same dedupe rule as combat deeds — a hero
+    who forges twenty fine blades has one deed about forging fine blades.
+    Fail-safe: None on error or duplicate, never raises into a base action."""
+    try:
+        if hero_id is None or hero_id < 0 or not text:
+            return None
+        _ensure_schema(conn)
+        dup = conn.execute(
+            "SELECT 1 FROM hero_deeds WHERE hero_id = ? AND deed = ?", (hero_id, text)
+        ).fetchone()
+        if dup:
+            return None
+        conn.execute("INSERT INTO hero_deeds (hero_id, deed, floor) VALUES (?,?,?)",
+                     (hero_id, text, floor_number))
+        return {"hero_id": hero_id, "deed": text}
+    except Exception as e:
+        print(f"Base deed recording error: {e}")
+        return None
+
+
+# Rarity is the gate for craft deeds: an iron dagger is a Tuesday, a legendary
+# blade is a life's work. Keeping the threshold here rather than at each call
+# site means one place decides what counts as remarkable.
+CRAFT_DEED_RARITIES = {"Legendary", "Mythic", "Ascended"}
+
+
+def record_craft_deed(conn, smith_id: int, item_name: str, rarity: str) -> dict | None:
+    """The smith remembers making something extraordinary."""
+    if rarity not in CRAFT_DEED_RARITIES:
+        return None
+    return record_base_deed(conn, smith_id, f"Forged {item_name} — {rarity.lower()} work")
+
+
+def record_teaching_deed(conn, teacher_id: int, student_name: str, milestone: str) -> dict | None:
+    """A trainer's record of someone else's breakthrough."""
+    return record_base_deed(conn, teacher_id, f"Taught {student_name}, who {milestone}")
+
+
+def record_healing_deed(conn, medic_id: int, patient_name: str) -> dict | None:
+    """Pulling someone back from the edge is the Infirmary's version of a boss kill."""
+    return record_base_deed(conn, medic_id, f"Brought {patient_name} back from the brink")
+
+
+def record_feast_deed(conn, cook_id: int, dish: str) -> dict | None:
+    """Only for a cook whose work actually carried a climb."""
+    return record_base_deed(conn, cook_id, f"Set the table with {dish} before the climb")
+
+
 def get_hero_deeds(conn, hero_id: int) -> list[dict]:
     _ensure_schema(conn)
     rows = conn.execute(

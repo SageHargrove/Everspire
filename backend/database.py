@@ -570,6 +570,17 @@ WHERE NOT EXISTS (SELECT 1 FROM recipes WHERE name = 'Void Ring');
         except sqlite3.OperationalError:
             pass
 
+        # Who made it. Only ever set by the forge — gacha and drop equipment
+        # has no maker and stays NULL, which is the honest answer for a blade
+        # that fell out of a chest. Feeds the chained craft deed: when a
+        # legendary piece goes on to do something worth recording, the smith
+        # who never left the base gets the deed for it.
+        try:
+            conn.execute("ALTER TABLE equipment ADD COLUMN crafted_by INTEGER")
+            print("[DB] Migrated: added column 'crafted_by' to equipment")
+        except sqlite3.OperationalError:
+            pass
+
         try:
             conn.execute("ALTER TABLE equipment ADD COLUMN base_end INTEGER DEFAULT 0")
             conn.execute("ALTER TABLE equipment ADD COLUMN base_wil INTEGER DEFAULT 0")
