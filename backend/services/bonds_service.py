@@ -5,6 +5,26 @@ def get_bond(conn, hero_a_id: int, hero_b_id: int) -> int:
     row = conn.execute("SELECT bond_level FROM hero_bonds WHERE hero_a_id = ? AND hero_b_id = ?", (a, b)).fetchone()
     return row["bond_level"] if row else 0
 
+def get_pairwise_bonds(hero_ids: list[int]) -> dict:
+    """{(lower_id, higher_id): bond_level} for every bonded pair in the list.
+
+    get_team_bonds_multiplier() collapses this to a per-hero total, which is
+    all a stat bonus needs. Combat needs the pairs themselves: when a hero
+    falls, who specifically was close to *them* decides who reacts.
+    """
+    if not hero_ids or len(hero_ids) < 2:
+        return {}
+    placeholders = ",".join("?" for _ in hero_ids)
+    query = f"""
+        SELECT hero_a_id, hero_b_id, bond_level
+        FROM hero_bonds
+        WHERE hero_a_id IN ({placeholders}) AND hero_b_id IN ({placeholders})
+    """
+    with db() as conn:
+        rows = conn.execute(query, tuple(hero_ids) * 2).fetchall()
+    return {(r["hero_a_id"], r["hero_b_id"]): r["bond_level"] for r in rows}
+
+
 def get_team_bonds_multiplier(hero_ids: list[int]) -> dict:
     """
     Returns a dictionary of {hero_id: total_bond_level} for the active team.

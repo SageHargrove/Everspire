@@ -53,6 +53,8 @@ class CombatUnit:
     hero_star: int = 1
     level: int = 1
     battle_tendency: str = "Stoic"
+    ego_type: str = ""         # Aggressive/Cautious/Tactical/Leader — see ego_service
+    ego_patience: int = 100    # 0 = they rebuild the team themselves; low = they resent this lineup
     is_team_leader: bool = False
     team_position: int = 0     # the hero's slot in the team formation (0 = first)
     isolated_rounds: int = 0   # Reckless panic response — exposed, takes bonus damage, preferred enemy target
@@ -860,6 +862,68 @@ def _fear_check(unit: CombatUnit, log: list, resist_mult: float = 1.0) -> bool:
         return True
 
     return False
+
+
+# ─── Grief and resentment ───────────────────────────────────────────────────
+#
+# Both of these deliberately reuse the existing panic states rather than
+# inventing new combat math: bracing_rounds (pull back, take less damage,
+# contribute less) and isolated_rounds (charge out exposed, take more damage,
+# become the preferred enemy target). Those are already tuned and tested, and
+# they happen to describe grief and vengeance exactly.
+
+BOND_GRIEF_THRESHOLD = 3      # bond level below this is an acquaintance, not a loss
+BOND_GRIEF_ROUNDS = 2
+BOND_RAGE_TENDENCIES = {"Vengeful", "Reckless"}   # these charge instead of freezing
+
+EGO_RESENT_THRESHOLD = 30     # patience below this = they don't want to be here
+EGO_RESENT_CHANCE = 0.35      # per round, so it reads as sullen rather than scripted
+EGO_RESENT_ROUNDS = 1
+
+
+def _bond_death_reactions(fallen, alive_heroes, pairwise_bonds, log):
+    """A hero who just watched someone they were close to die reacts to it.
+
+    This is the payoff for the bond system existing at all: until now a bond
+    was worth +1% stats per level and nothing else, so the relationship never
+    showed up at the moment it would actually matter. Vengeful and Reckless
+    heroes charge (isolated — exposed, and enemies prefer them); everyone else
+    freezes up defensively for a round or two.
+    """
+    if not pairwise_bonds:
+        return
+    for hero in alive_heroes:
+        if not hero.alive or hero is fallen or not hero.is_hero:
+            continue
+        key = (min(hero.id, fallen.id), max(hero.id, fallen.id))
+        level = pairwise_bonds.get(key, 0)
+        if level < BOND_GRIEF_THRESHOLD:
+            continue
+        if hero.battle_tendency in BOND_RAGE_TENDENCIES:
+            hero.isolated_rounds = max(hero.isolated_rounds, BOND_GRIEF_ROUNDS)
+            log.append(f"  ✦ {hero.name} sees {fallen.name} fall and breaks formation — nothing else matters now.")
+        else:
+            hero.bracing_rounds = max(hero.bracing_rounds, BOND_GRIEF_ROUNDS)
+            log.append(f"  ✗ {hero.name} falters — {fallen.name} is down, and their guard goes up instead of forward.")
+
+
+def _ego_resentment_check(hero, log):
+    """A hero whose ego has been ignored fights like it.
+
+    ego_patience already decays when the lineup isn't what they'd have picked,
+    and at zero they rebuild the team themselves (ego_service). That rebellion
+    was the only consequence, which made the whole slide invisible until it
+    fired. Now the resentment shows up in the fight first — so a patience
+    problem is something the player can watch happening rather than something
+    that ambushes them.
+    """
+    if not hero.is_hero or not hero.ego_type or hero.ego_patience >= EGO_RESENT_THRESHOLD:
+        return False
+    if random.random() >= EGO_RESENT_CHANCE:
+        return False
+    hero.bracing_rounds = max(hero.bracing_rounds, EGO_RESENT_ROUNDS)
+    log.append(f"  ✗ {hero.name} hangs back — they never wanted to fight alongside this squad.")
+    return True
 
 
 # battle_tendency -> the whole squad's passive combat modifier while this
@@ -2143,6 +2207,8 @@ def _resolve_combat_from_processed(processed, floor_number, is_boss, is_miniboss
             regen_pct=h.get("regen_pct", 0.0),
             hero_star=get_hero_star(h),
             battle_tendency=h.get("battle_tendency") or "Stoic",
+            ego_type=h.get("ego_type") or "",
+            ego_patience=h.get("ego_patience", 100) if h.get("ego_patience") is not None else 100,
             is_team_leader=bool(h.get("is_team_leader")),
             team_position=h.get("team_position", 0) or 0,
             equipped_consumable=h.get("equipped_consumable"),
@@ -2295,6 +2361,18 @@ def _resolve_combat_from_processed(processed, floor_number, is_boss, is_miniboss
     backline  = combatants_heroes[2:]
 
     all_units = combatants_heroes + enemies
+
+    # Who was close to whom, for the grief sweep in the round loop. Pulled
+    # once here rather than per-death — it's a DB read, and the roster can't
+    # change mid-fight. _mourned makes each death fire its reaction exactly
+    # once no matter how many rounds the body stays on the field.
+    try:
+        from services.bonds_service import get_pairwise_bonds
+        pairwise_bonds = get_pairwise_bonds([u.id for u in combatants_heroes if u.is_hero and u.id > 0])
+    except Exception:
+        pairwise_bonds = {}
+    _mourned = set()
+
     if is_escort:
         max_rounds = ESCORT_TURN_LIMIT
     elif is_survival_swarm:
@@ -2523,10 +2601,23 @@ def _resolve_combat_from_processed(processed, floor_number, is_boss, is_miniboss
         if not alive_heroes or not alive_enemies:
             break
 
+        # ─── Bond grief sweep ───
+        # Done once per round against a set of already-mourned ids rather than
+        # at each of the eight places a unit can die: those sites are spread
+        # across the generic skill engine, DOT ticks, executions and ordinary
+        # attacks, and hooking every one of them would be a much larger change
+        # for the same result a round's latency later.
+        for fallen in combatants_heroes:
+            if not fallen.alive and fallen.id not in _mourned:
+                _mourned.add(fallen.id)
+                _bond_death_reactions(fallen, [u for u in combatants_heroes if u.alive],
+                                      pairwise_bonds, log)
+
         # ─── Fear checks at start of each round ───
         for hero in alive_heroes:
             hero.fear_stunned = False  # Reset from last round
             _fear_check(hero, log, fear_resist_mult)
+            _ego_resentment_check(hero, log)
             if hero.isolated_rounds > 0:
                 hero.isolated_rounds -= 1
             if hero.bracing_rounds > 0:
