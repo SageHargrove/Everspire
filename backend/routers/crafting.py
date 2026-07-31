@@ -38,7 +38,7 @@ def craft_premade(req: PremadeCraftReq):
         recipe = conn.execute("SELECT * FROM recipes WHERE id = ?", (req.recipe_id,)).fetchone()
         if not recipe: raise HTTPException(status_code=404, detail="Recipe not found")
         
-        crafter = conn.execute("SELECT name, level, apt_tactical FROM heroes WHERE id = ? AND is_alive = 1", (req.crafter_id,)).fetchone()
+        crafter = conn.execute("SELECT name, level, apt_tactical, hero_class FROM heroes WHERE id = ? AND is_alive = 1", (req.crafter_id,)).fetchone()
         if not crafter: raise HTTPException(status_code=400, detail="Crafter not found or dead")
         
         base_row = conn.execute("SELECT gold, materials FROM base WHERE id = 1").fetchone()
@@ -143,7 +143,7 @@ def craft_premade(req: PremadeCraftReq):
 @router.post("/craft/creative")
 def craft_creative(req: CreativeCraftReq):
     with db() as conn:
-        crafter = conn.execute("SELECT name, level, apt_tactical FROM heroes WHERE id = ? AND is_alive = 1", (req.crafter_id,)).fetchone()
+        crafter = conn.execute("SELECT name, level, apt_tactical, hero_class FROM heroes WHERE id = ? AND is_alive = 1", (req.crafter_id,)).fetchone()
         if not crafter: raise HTTPException(status_code=400, detail="Crafter not found")
         
         base_row = conn.execute("SELECT materials FROM base WHERE id = 1").fetchone()
@@ -165,6 +165,15 @@ def craft_creative(req: CreativeCraftReq):
         equip, recipe_name, recipe_desc = generate_creative_craft(req.description, req.materials, power_pool, crafter["level"])
         
         # Save Equipment
+        # Grade it from the materials and the smith, overriding the flat "B"
+        # the LLM path returns. This is the only route to genuinely good gear:
+        # a rare component plus a trained Blacksmith, not a grindable recipe.
+        from services.equipment_service import creative_craft_rarity, SMITH_CLASSES
+        from services.materials_service import material_tier_of
+        tiers = [material_tier_of(m) for m in req.materials]
+        equip["rarity"] = creative_craft_rarity(
+            tiers, crafter["level"], (crafter["hero_class"] in SMITH_CLASSES))
+
         equip["crafted_by"] = req.crafter_id
         equip["origin"] = origin_forged(crafter["name"] if crafter else None)
         equip_id = save_equipment(equip, conn)

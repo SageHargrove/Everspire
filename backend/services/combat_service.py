@@ -2373,6 +2373,21 @@ def _resolve_combat_from_processed(processed, floor_number, is_boss, is_miniboss
         pairwise_bonds = {}
     _mourned = set()
 
+    # The room itself. Derived from the floor's band and a fixed seed, so a
+    # floor's environment is as stable a fact as its enemy composition —
+    # scouting has to report something that will still be true next visit.
+    # Applied to enemies too: a condition that only touched the player would
+    # be a difficulty slider wearing a costume.
+    try:
+        from services.environment_service import (
+            get_floor_environment, apply_condition_to_units, tick_hazard as _tick_hazard,
+        )
+        floor_env = get_floor_environment(floor_number, _current_tier_for_floor(floor_number))
+        apply_condition_to_units(floor_env, all_units, log)
+    except Exception as e:
+        print(f"[Env] Floor environment skipped: {e}")
+        floor_env, _tick_hazard = None, None
+
     if is_escort:
         max_rounds = ESCORT_TURN_LIMIT
     elif is_survival_swarm:
@@ -2583,6 +2598,13 @@ def _resolve_combat_from_processed(processed, floor_number, is_boss, is_miniboss
                     e.intelligence = int(e.intelligence * (1 + BLITZ_STACK_PER_ROUND))
                     e.agility = int(e.agility * (1 + BLITZ_STACK_PER_ROUND))
             log.append(f"  ✦ The room surges — enemies grow stronger (round {round_num}).")
+
+        # Escalating floor hazard, if this floor has one. Same compounding
+        # shape as the Blitz stacking directly above, pointed at the room
+        # rather than the enemies — a team that can't close gets argued with
+        # by the environment, not only by the 30-round limit.
+        if floor_env and _tick_hazard:
+            _tick_hazard(floor_env, round_num, all_units, log)
 
         if tactician_first_strike and round_num == 1:
             # The Tactician read the room — heroes act first on round 1,

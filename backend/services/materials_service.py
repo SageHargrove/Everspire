@@ -126,6 +126,17 @@ def base_material_name(tiered_name: str) -> str:
         return tiered_name.rsplit(" (", 1)[0]
     return tiered_name
 
+def material_tier_of(tiered_name: str) -> str | None:
+    """The "(D)".."(S)" grade on a material name, or None if it carries none.
+    Crafting grades its output off these, so a rare component is worth
+    spending rather than banking forever."""
+    if tiered_name.endswith(")") and "(" in tiered_name:
+        tier = tiered_name.rsplit("(", 1)[1].rstrip(")").strip()
+        if tier in MATERIAL_TIERS:
+            return tier
+    return None
+
+
 def get_material_total(materials: dict, base_name: str) -> int:
     """Sum every tier of base_name the player holds — recipes/ascension costs
     are written against the base name only, agnostic to which tier(s)

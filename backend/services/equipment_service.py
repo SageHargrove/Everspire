@@ -37,6 +37,39 @@ def is_remarkable(rarity: str) -> bool:
 REMARKABLE_MIN_RARITY = "A-"
 
 
+# Creative crafting is meant to be the ONLY route to genuinely good gear:
+# rare materials plus a real smith, not a recipe you can grind. Before this,
+# both craft paths hardcoded their output ("B" for creative, "B"/"C" for
+# premade), so material quality bought nothing and the ceiling was fixed no
+# matter who was working or what they were working with.
+SMITH_CLASSES = {"Blacksmith", "Forge Lord", "Runesmith"}
+_MATERIAL_TIER_FLOOR = {"D": "C-", "C": "C+", "B": "B", "A": "A-", "S": "A+"}
+
+
+def creative_craft_rarity(material_tiers: list[str], crafter_level: int = 1,
+                          is_smith: bool = False) -> str:
+    """Grade a creative craft from what went into it and who made it.
+
+    The BEST material sets the floor — one genuinely rare component is what
+    makes a piece special, and averaging would let a pile of scrap dilute it.
+    A trained smith adds a step, and level adds another past 40, so an S-tier
+    component in the hands of a high-level Blacksmith is what reaches the A+
+    range the deed system considers a life's work.
+    """
+    best = None
+    for t in material_tiers or []:
+        if t in _MATERIAL_TIER_FLOOR and (best is None or
+                list(_MATERIAL_TIER_FLOOR).index(t) > list(_MATERIAL_TIER_FLOOR).index(best)):
+            best = t
+    base = _MATERIAL_TIER_FLOOR.get(best, "C")
+    idx = RARITY_TIERS.index(base)
+    if is_smith:
+        idx += 1
+    if (crafter_level or 1) >= 40:
+        idx += 1
+    return RARITY_TIERS[min(idx, len(RARITY_TIERS) - 1)]
+
+
 def origin_floor_drop(floor_number: int, rarity: str = None) -> str:
     """Drops name the floor, because 'floor 50, out of an A+ cache' is a story
     and 'found' is not."""
