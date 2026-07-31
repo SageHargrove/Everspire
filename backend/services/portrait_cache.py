@@ -5,7 +5,7 @@ Pre-generates hero portraits in the background (with race/hair/outfit/gender/cla
 variety baked in) so pulls feel instant, and generates hero-specific portraits from
 LLM prompts when the cache is empty or a fallback profile was used.
 
-House art style: dark fantasy anime, Solo Leveling manhwa aesthetic — moody rim
+House art style: dark fantasy anime — moody rim
 lighting, saturated colors, sharp lineart, tight face-focused framing.
 """
 
@@ -59,7 +59,7 @@ BASE_STYLE = (
     # additions are what caused the r9 drift. Fading-into-bg is now handled by
     # the LIGHTING FIX block below (front key light) rather than by cranking
     # rim light, which only lit edges and left the front of the figure dark.
-    "(Solo Leveling manhwa art style:1.3), dark fantasy anime, "
+    "(dark fantasy manhwa illustration:1.3), dark fantasy anime, "
     # ink/lineart weights raised: the dominant volume-run reject is a glossy
     # 3D-CG drift whose defining absence is LINEART
     "(bold black ink outlines:1.25), (thick clean lineart:1.15), (cel shading:1.1), hard shadow edges, "
@@ -378,7 +378,7 @@ NEGATIVE_STYLE = (
 # again. Use these (+ the BOOST prefix) for monster-DATASET generation.
 # GOLDEN — do NOT fold hero-recipe changes into these without A/B evidence.
 MONSTER_GEN_STYLE = (
-    "(Solo Leveling manhwa art style:1.3), dark fantasy anime, "
+    "(dark fantasy manhwa illustration:1.3), dark fantasy anime, "
     "(bold black ink outlines:1.25), (thick clean lineart:1.15), (cel shading:1.1), hard shadow edges, "
     "highly detailed facial shading, multiple distinct shading tones, colored midtones in shadow, "
     "detailed hair strands, textured hair shading, "
@@ -452,7 +452,7 @@ MONSTER_STYLE = (
     # tried 2026-07-06, they made renders WORSE (r5 wolf/spider regressed vs
     # r4). The r4 recipe (this one) is the verified baseline: user kept its
     # wolf and chimera.
-    "(Solo Leveling manhwa art style, cel-shaded anime illustration:1.35), dark fantasy anime monster design, "
+    "(dark fantasy manhwa illustration, cel-shaded anime illustration:1.35), dark fantasy anime monster design, "
     "monstrous and beast-like in form, not a human or attractive humanoid figure, fully non-sexual, "
     "(bold black ink outlines:1.25), thick clean lineart, cel shading, multiple distinct shading tones, "
     "well-lit subject with clearly visible surface detail and texture, balanced natural exposure, "
@@ -485,7 +485,7 @@ MONSTER_STYLE = (
 # uses successfully — the hint carries 100% of what the creature looks
 # like, this constant only carries art-style and lighting.
 HUMANOID_EVIL_STYLE = (
-    "(Solo Leveling manhwa art style, cel-shaded anime illustration:1.3), dark fantasy anime, "
+    "(dark fantasy manhwa illustration, cel-shaded anime illustration:1.3), dark fantasy anime, "
     "(bold black ink outlines:1.2), thick clean lineart, cel shading, "
     "well-lit subject with clearly visible surface detail and texture, balanced natural exposure, "
     "rich saturated but balanced colors across the entire body, vivid distinct material colors, "
