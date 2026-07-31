@@ -1316,8 +1316,13 @@ const getGenRate = (fac) => {
                 <button key={fac.id} className={`ilm-fac-card ${selFacId === fac.id ? 'sel' : ''}`}
                   onClick={() => setSelFacId(selFacId === fac.id ? null : fac.id)}>
                   <div className="ilm-fac-card-art">
-                    {facArt(fac.type, fac.level) && (
-                      <img src={facArt(fac.type, fac.level)} alt="" className="ilm-fac-card-art-img"
+                    {(fac.art_url || facArt(fac.type, fac.level)) && (
+                      /* art_url is this profile's OWN render — an outdoor
+                         facility generated against their Wall. Absent for
+                         everyone who hasn't generated one, which is the
+                         normal case, so the shipped tier art stays the
+                         fallback. */
+                      <img src={fac.art_url || facArt(fac.type, fac.level)} alt="" className="ilm-fac-card-art-img"
                         onError={(e) => { e.currentTarget.style.display = 'none' }} />
                     )}
                     <span className="ilm-fac-card-art-ph">facility art png · full bleed</span>

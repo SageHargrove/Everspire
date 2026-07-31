@@ -64,6 +64,17 @@ def get_facilities():
                 f["heroes"] = [dict(a) for a in assigned if a["facility_id"] == f["id"]]
                 f["max_slots"] = f["slots_unlocked"]
 
+                # Player-specific art, when this profile has generated its own
+                # (outdoor facilities rendered against their Wall). None means
+                # "use the shipped image" — the frontend keeps its existing
+                # tier logic as the fallback and never needs to know the rule.
+                try:
+                    from services.facility_art_service import art_url, art_tier_for_level
+                    f["art_url"] = art_url(f["type"].lower().replace(" ", "_"),
+                                           art_tier_for_level(f["level"]))
+                except Exception:
+                    f["art_url"] = None
+
                 # Calculate upgrade cost
                 info = FACILITY_TYPES.get(f["type"], {"cost": 5000, "max_level": 50})
                 f["max_level"] = info.get("max_level", 50)
@@ -181,7 +192,21 @@ def upgrade_facility(facility_id: int):
         new_level = level + 1
         new_slots = 1 + (new_level // 5)
         conn.execute("UPDATE facilities SET level = ?, slots_unlocked = ? WHERE id = ?", (new_level, new_slots, facility_id))
-        
+        fac_type = fac["type"]
+        wall_row = conn.execute("SELECT level FROM facilities WHERE type = 'Wall' AND base_id = 1").fetchone()
+        wall_lvl = wall_row["level"] if wall_row else 1
+
+    # Re-render this facility's art with the player's own Wall behind it, if
+    # it's an outdoor one and generation is on. Queued on a thread and outside
+    # the db block: a build must never wait ~30s on a render, and must never
+    # fail because one didn't work.
+    try:
+        from services.facility_art_service import queue_for_facility, art_tier_for_level
+        queue_for_facility(fac_type.lower().replace(" ", "_"),
+                           art_tier_for_level(new_level), art_tier_for_level(wall_lvl))
+    except Exception as e:
+        print(f"[FacilityArt] skipped on upgrade: {e}")
+
     return {"ok": True, "new_level": new_level}
 
 def assign_hero_to_facility(facility_id: int, hero_id: int, role: str = None, target_hero_id: int = None, target_skill_id: str = None):
