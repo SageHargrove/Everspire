@@ -1,6 +1,28 @@
 import random
 from database import db
 
+# ── provenance ──────────────────────────────────────────────────────────────
+#
+# Every piece of gear says where it came from. A blade pulled from a floor-50
+# chest reads better than a blank, and a forged one carries its smith's name
+# wherever it ends up — including onto the smith's own record, once it does
+# something worth remembering.
+ORIGIN_UNKNOWN = "Of unknown origin"
+ORIGIN_SUMMONED = "Drawn from the summoning array"
+ORIGIN_STARTER = "Issued at the outset"
+
+
+def origin_forged(smith_name: str = None) -> str:
+    return f"Forged by {smith_name}" if smith_name else "Forged at the base"
+
+
+def origin_floor_drop(floor_number: int, rarity: str = None) -> str:
+    """Drops name the floor, because 'floor 50 legendary chest' is a story and
+    'found' is not."""
+    if rarity in ("Legendary", "Mythic", "Ascended"):
+        return f"Claimed from a {rarity.lower()} cache on floor {floor_number}"
+    return f"Recovered on floor {floor_number}"
+
 def get_vault_capacity(conn) -> int:
     """Base storage of 20, +16 per Vault facility slot unlocked (matches
     the frontend's display formula in InventoryPage.jsx)."""
@@ -316,10 +338,10 @@ def save_equipment(equip: dict, conn=None) -> int:
     Pass `conn` if the caller is already inside a `with db() as conn:` block —
     opening a second connection while the first is still uncommitted raises
     'database is locked' on SQLite."""
-    # crafted_by is NULL for everything that wasn't forged — gacha pulls and
-    # floor drops have no maker, and pretending otherwise would put a smith's
-    # name on a blade found in a chest.
-    sql = "INSERT INTO equipment (name, type, rarity, level, base_str, base_int, base_hlt, base_agi, base_def, base_end, base_wil, base_luck, str_pct, int_pct, hlt_pct, agi_pct, crit_chance, dodge_chance, armor_pen, dmg_reduction_pct, set_family, weapon_type, armor_type, accessory_type, crafted_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    # crafted_by is NULL for anything not forged — a smith's name on a blade
+    # found in a chest would be a lie. `origin` covers those instead, so every
+    # piece can say where it came from rather than showing a blank.
+    sql = "INSERT INTO equipment (name, type, rarity, level, base_str, base_int, base_hlt, base_agi, base_def, base_end, base_wil, base_luck, str_pct, int_pct, hlt_pct, agi_pct, crit_chance, dodge_chance, armor_pen, dmg_reduction_pct, set_family, weapon_type, armor_type, accessory_type, crafted_by, origin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     params = (
         equip["name"], equip["type"], equip["rarity"], equip.get("level", 1),
         equip.get("base_str", 0), equip.get("base_int", 0), equip.get("base_hlt", 0), equip.get("base_agi", 0), equip.get("base_def", 0),
@@ -327,7 +349,7 @@ def save_equipment(equip: dict, conn=None) -> int:
         equip.get("str_pct", 0.0), equip.get("int_pct", 0.0), equip.get("hlt_pct", 0.0), equip.get("agi_pct", 0.0),
         equip.get("crit_chance", 0.0), equip.get("dodge_chance", 0.0), equip.get("armor_pen", 0.0), equip.get("dmg_reduction_pct", 0.0),
         equip.get("set_family"), equip.get("weapon_type"), equip.get("armor_type"), equip.get("accessory_type"),
-        equip.get("crafted_by"),
+        equip.get("crafted_by"), equip.get("origin") or ORIGIN_UNKNOWN,
     )
     if conn is not None:
         return conn.execute(sql, params).lastrowid

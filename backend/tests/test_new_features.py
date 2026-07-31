@@ -11,11 +11,12 @@ def main():
     
     # 1. Start arena_server
     print("Starting arena_server...")
-    arena_proc = subprocess.Popen(["python", "-m", "uvicorn", "main:app", "--port", "8001"], cwd=r"c:\infinite gacha\tower-gacha\arena_server", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    _repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    arena_proc = subprocess.Popen(["python", "-m", "uvicorn", "main:app", "--port", "8001"], cwd=os.path.join(_repo, "arena_server"), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # 2. Start backend server
     print("Starting backend server...")
-    backend_proc = subprocess.Popen(["python", "-m", "uvicorn", "main:app", "--port", "8000"], cwd=r"c:\infinite gacha\tower-gacha\backend", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    backend_proc = subprocess.Popen(["python", "-m", "uvicorn", "main:app", "--port", "8000"], cwd=os.path.join(_repo, "backend"), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     time.sleep(5)
     

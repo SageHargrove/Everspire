@@ -3,12 +3,15 @@ import json
 import sys
 import os
 
-sys.path.insert(0, os.path.abspath(r"c:\infinite gacha\tower-gacha"))
-sys.path.insert(0, os.path.abspath(r"c:\infinite gacha\tower-gacha\backend"))
+# repo + backend dirs, relative to this file — survives any folder rename/move
+_BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_REPO = os.path.dirname(_BACKEND)
+sys.path.insert(0, _REPO)
+sys.path.insert(0, _BACKEND)
 
 try:
     from main import app as backend_app
-    sys.path.insert(0, os.path.abspath(r"c:\infinite gacha\tower-gacha\arena_server"))
+    sys.path.insert(0, os.path.join(_REPO, "arena_server"))
     from arena_server.main import app as arena_app
 except Exception as e:
     print("Error importing apps:", e)

@@ -16,7 +16,7 @@ from routers import settings as settings_router
 
 init_db()
 
-app = FastAPI(title="Tower of Eternity Backend")
+app = FastAPI(title="Everspire Backend")
 
 # ─── drive-by request guard (local single-player backend) ─────────────
 #

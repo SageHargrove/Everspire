@@ -1,6 +1,6 @@
 @echo off
 setlocal
-REM ─── Tower of Eternity — personal hero generation installer ─────────────
+REM ─── Everspire — personal hero generation installer ─────────────────────
 REM Sets up local AI generation so YOUR summons get unique, never-before-
 REM seen heroes instead of the shared base gallery.
 REM
@@ -38,9 +38,9 @@ del ComfyUI_windows_portable_nvidia.7z 2>nul
 echo [2/4] Downloading the art model (~7GB — grab a coffee)...
 curl -L -C - -o "%COMFY%\models\checkpoints\noobaiXLNAIXL_vPred10Version.safetensors" "https://huggingface.co/Laxhar/noobai-XL-Vpred-1.0/resolve/main/NoobAI-XL-Vpred-v1.0.safetensors" || goto fail
 
-echo [3/5] Downloading the Tower of Eternity style models (~450MB)...
-curl -L -C - -o "%COMFY%\models\loras\ToE_Heroes_Main.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Tower-of-Eternity/main/generation/loras/ToE_Heroes_Main.safetensors" || goto fail
-curl -L -C - -o "%COMFY%\models\loras\AddMicroDetails_NoobAI_v5.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Tower-of-Eternity/main/generation/loras/AddMicroDetails_NoobAI_v5.safetensors" || goto fail
+echo [3/5] Downloading the Everspire style models (~450MB)...
+curl -L -C - -o "%COMFY%\models\loras\ToE_Heroes_Main.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/ToE_Heroes_Main.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\AddMicroDetails_NoobAI_v5.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/AddMicroDetails_NoobAI_v5.safetensors" || goto fail
 
 echo [4/5] Installing the content-aware cutout node (transparent hero art)...
 if not exist "%COMFY%\custom_nodes\toe_rembg" mkdir "%COMFY%\custom_nodes\toe_rembg"

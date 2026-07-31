@@ -570,14 +570,25 @@ WHERE NOT EXISTS (SELECT 1 FROM recipes WHERE name = 'Void Ring');
         except sqlite3.OperationalError:
             pass
 
-        # Who made it. Only ever set by the forge — gacha and drop equipment
-        # has no maker and stays NULL, which is the honest answer for a blade
-        # that fell out of a chest. Feeds the chained craft deed: when a
-        # legendary piece goes on to do something worth recording, the smith
-        # who never left the base gets the deed for it.
+        # Where a piece came from.
+        #  crafted_by  — hero id of the smith, forge only
+        #  origin      — human-readable provenance for EVERYTHING, e.g.
+        #                "Forged by Kaelen", "Summoned", "Floor 50 chest"
+        # Every item has a story; a blade that fell out of a floor-50 chest
+        # deserves to say so rather than reading as a blank. Feeds the chained
+        # craft deed too: when a legendary piece goes on to do something worth
+        # recording, the smith who never left the base gets credited.
         try:
             conn.execute("ALTER TABLE equipment ADD COLUMN crafted_by INTEGER")
             print("[DB] Migrated: added column 'crafted_by' to equipment")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            conn.execute("ALTER TABLE equipment ADD COLUMN origin TEXT")
+            # Pre-existing gear predates the field entirely — "Unknown" is the
+            # truthful answer for it, not a guess at where it came from.
+            conn.execute("UPDATE equipment SET origin = 'Of unknown origin' WHERE origin IS NULL")
+            print("[DB] Migrated: added column 'origin' to equipment")
         except sqlite3.OperationalError:
             pass
 

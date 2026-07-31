@@ -1409,7 +1409,21 @@ def forge_craft(req: CraftRequest):
 
         # Craft
         equip = craft_equipment_for_slot(req.slot, level, apt)
+        # Credit the smith. CraftRequest carries no hero id — the Forge works
+        # off whoever is ASSIGNED to it — so the maker is the best-qualified
+        # assigned hero, which is also the one whose bonus set the quality.
+        from services.equipment_service import origin_forged
+        _smith = None
+        if assigned:
+            _smith = max(assigned, key=lambda h: (h["hero_class"] in ("Blacksmith", "Forge Lord", "Runesmith"),
+                                                  h["level"]))
+        equip["crafted_by"] = _smith["id"] if _smith else None
+        equip["origin"] = origin_forged(_smith["name"] if _smith else None)
         equip_id = save_equipment(equip, conn=conn)
+
+        if _smith:
+            from services.deeds_service import record_craft_deed
+            record_craft_deed(conn, _smith["id"], equip["name"], equip.get("rarity"))
         equip["id"] = equip_id
         
         # Grant XP to assigned heroes

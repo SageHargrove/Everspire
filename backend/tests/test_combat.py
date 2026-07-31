@@ -1,5 +1,6 @@
-import sys, traceback
-sys.path.append('c:/infinite gacha/tower-gacha/backend')
+import sys, traceback, os
+# backend dir, relative to this file -- survives any folder rename/move
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import db
 with db() as conn:
     heroes = [dict(r) for r in conn.execute('SELECT * FROM heroes WHERE is_alive=1 LIMIT 4').fetchall()]

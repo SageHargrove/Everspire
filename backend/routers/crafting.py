@@ -5,7 +5,7 @@ import json
 import random
 
 from database import db
-from services.equipment_service import save_equipment
+from services.equipment_service import save_equipment, origin_forged
 from services.llm_service import generate_creative_craft
 
 router = APIRouter()
@@ -38,7 +38,7 @@ def craft_premade(req: PremadeCraftReq):
         recipe = conn.execute("SELECT * FROM recipes WHERE id = ?", (req.recipe_id,)).fetchone()
         if not recipe: raise HTTPException(status_code=404, detail="Recipe not found")
         
-        crafter = conn.execute("SELECT level, apt_tactical FROM heroes WHERE id = ? AND is_alive = 1", (req.crafter_id,)).fetchone()
+        crafter = conn.execute("SELECT name, level, apt_tactical FROM heroes WHERE id = ? AND is_alive = 1", (req.crafter_id,)).fetchone()
         if not crafter: raise HTTPException(status_code=400, detail="Crafter not found or dead")
         
         base_row = conn.execute("SELECT gold, materials FROM base WHERE id = 1").fetchone()
@@ -129,6 +129,7 @@ def craft_premade(req: PremadeCraftReq):
         # Stamp the maker. Only forged gear carries this — it's what lets a
         # legendary piece credit the smith later, from wherever it ends up.
         equip["crafted_by"] = req.crafter_id
+        equip["origin"] = origin_forged(crafter["name"] if crafter else None)
         equip_id = save_equipment(equip, conn)
         equip["id"] = equip_id
 
@@ -142,7 +143,7 @@ def craft_premade(req: PremadeCraftReq):
 @router.post("/craft/creative")
 def craft_creative(req: CreativeCraftReq):
     with db() as conn:
-        crafter = conn.execute("SELECT level, apt_tactical FROM heroes WHERE id = ? AND is_alive = 1", (req.crafter_id,)).fetchone()
+        crafter = conn.execute("SELECT name, level, apt_tactical FROM heroes WHERE id = ? AND is_alive = 1", (req.crafter_id,)).fetchone()
         if not crafter: raise HTTPException(status_code=400, detail="Crafter not found")
         
         base_row = conn.execute("SELECT materials FROM base WHERE id = 1").fetchone()
@@ -165,6 +166,7 @@ def craft_creative(req: CreativeCraftReq):
         
         # Save Equipment
         equip["crafted_by"] = req.crafter_id
+        equip["origin"] = origin_forged(crafter["name"] if crafter else None)
         equip_id = save_equipment(equip, conn)
         equip["id"] = equip_id
 

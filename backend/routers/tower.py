@@ -395,8 +395,9 @@ def _resolve_real_combat(conn, hero_teams, floor_number, is_boss, is_miniboss, z
             conn.execute("UPDATE base SET materials = ? WHERE id = 1", (json.dumps(current_mats),))
 
     if combat_result.get("equipment_drop"):
-        from services.equipment_service import save_equipment
+        from services.equipment_service import save_equipment, origin_floor_drop
         equip = combat_result["equipment_drop"]
+        equip["origin"] = origin_floor_drop(floor_number, equip.get("rarity"))
         equip["id"] = save_equipment(equip, conn=conn)
         result["equipment_drop"] = equip
 

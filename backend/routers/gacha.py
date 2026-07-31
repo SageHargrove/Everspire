@@ -695,7 +695,7 @@ def pull_equipment(req: PullRequest):
         raise HTTPException(status_code=400, detail="Pull 1-10 equipment at a time")
 
     from services.gacha_service import pull_equipment_gacha
-    from services.equipment_service import save_equipment
+    from services.equipment_service import save_equipment, ORIGIN_SUMMONED
 
     seasonal = req.banner == "seasonal"
     if seasonal:
@@ -708,6 +708,7 @@ def pull_equipment(req: PullRequest):
         for _ in range(req.count):
             try:
                 equip_dict = pull_equipment_gacha(conn, currency, seasonal=seasonal)
+                equip_dict["origin"] = ORIGIN_SUMMONED
                 equip_id = save_equipment(equip_dict, conn=conn)
                 equip_dict["id"] = equip_id
                 results.append(equip_dict)
@@ -808,7 +809,7 @@ def equip_spark_redeem():
     """Spend equip spark points (gem equipment pulls only) for a guaranteed
     random A-tier (A-/A/A+) item."""
     import random
-    from services.equipment_service import _roll_equipment_stats, RARITY_MULTS, EQUIPMENT_ADJECTIVES, _display_type_name, save_equipment
+    from services.equipment_service import _roll_equipment_stats, RARITY_MULTS, EQUIPMENT_ADJECTIVES, _display_type_name, save_equipment, ORIGIN_SUMMONED
 
     with db() as conn:
         base = conn.execute("SELECT equip_spark_points FROM base WHERE id = 1").fetchone()
@@ -823,7 +824,8 @@ def equip_spark_redeem():
         mult = RARITY_MULTS[rarity]
         stats = _roll_equipment_stats(eq_type, mult)
         name = f"{EQUIPMENT_ADJECTIVES.get(rarity, rarity)} {_display_type_name(eq_type, stats)}"
-        equip_dict = {"name": name, "type": eq_type, "rarity": rarity, "level": 1, **stats}
+        equip_dict = {"name": name, "type": eq_type, "rarity": rarity, "level": 1, **stats,
+                      "origin": ORIGIN_SUMMONED}
         equip_id = save_equipment(equip_dict, conn=conn)
         equip_dict["id"] = equip_id
 

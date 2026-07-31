@@ -1,5 +1,6 @@
-import sys
-sys.path.append('c:/infinite gacha/tower-gacha/backend')
+import sys, os
+# backend dir, relative to this file — survives any folder rename/move
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.card_template_service import composite_card
 from database import db
 

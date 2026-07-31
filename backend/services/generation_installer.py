@@ -32,8 +32,11 @@ SEVENZR_URL = "https://7-zip.org/a/7zr.exe"
 CHECKPOINT_URL = ("https://huggingface.co/Laxhar/noobai-XL-Vpred-1.0/resolve/main/"
                   "NoobAI-XL-Vpred-v1.0.safetensors")
 CHECKPOINT_NAME = "noobaiXLNAIXL_vPred10Version.safetensors"
-# LFS media URLs still resolve under the pre-rename repo path (verified 200).
-_LFS = "https://media.githubusercontent.com/media/SageHargrove/Tower-of-Eternity/main/generation/loras"
+# MUST track the GitHub repo name. The 2026-07-30 rename to Everspire broke
+# the old Tower-of-Eternity LFS path outright — it 404s, it does not redirect
+# the way normal repo URLs do. Re-verify these two return 200 after any future
+# rename, or every player's generation install fails at the LoRA step.
+_LFS = "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras"
 LORAS = [
     (f"{_LFS}/ToE_Heroes_Main.safetensors", "ToE_Heroes_Main.safetensors"),
     (f"{_LFS}/AddMicroDetails_NoobAI_v5.safetensors", "AddMicroDetails_NoobAI_v5.safetensors"),

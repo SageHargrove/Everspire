@@ -26,6 +26,56 @@ def _ensure_schema(conn):
     """)
 
 
+# A weapon good enough to be remembered is good enough for its maker to be
+# remembered with it. Same gate as record_craft_deed — an iron dagger that
+# happens to be held during a boss kill is not a smith's life's work.
+CHAINED_DEED_RARITIES = {"Legendary", "Mythic", "Ascended"}
+
+
+def _credit_the_smith(conn, wielder_id: int, deed_text: str, floor_number: int) -> list[dict]:
+    """Reflect a hero's deed back onto whoever forged the weapon they did it with.
+
+    Done here, from the wielder's id, rather than by threading a maker id
+    through the combat stat pipeline — the deed parser already knows who did
+    what, and equipment.is_equipped_to already knows what they were holding,
+    so the join costs one query and touches no combat code.
+
+    The point is the Blacksmith who never leaves the base. They can't earn a
+    boss kill, but the blade that landed it was theirs, and the Memorial
+    should say so.
+    """
+    try:
+        row = conn.execute(
+            """SELECT e.name, e.rarity, e.crafted_by, h.name AS smith_name
+               FROM equipment e
+               JOIN heroes h ON h.id = e.crafted_by
+               WHERE e.is_equipped_to = ? AND e.type = 'Weapon'
+                 AND e.crafted_by IS NOT NULL AND e.crafted_by != ?
+               LIMIT 1""",
+            (wielder_id, wielder_id),
+        ).fetchone()
+        if not row or row["rarity"] not in CHAINED_DEED_RARITIES:
+            return []
+
+        wielder = conn.execute("SELECT name FROM heroes WHERE id = ?", (wielder_id,)).fetchone()
+        wielder_name = wielder["name"] if wielder else "someone"
+        # The smith's version names the wielder and the weapon, not the blow —
+        # they weren't there, and a deed that pretended otherwise would read
+        # as a lie on their page.
+        text = f"Forged {row['name']}, which {wielder_name} carried on floor {floor_number}"
+
+        dup = conn.execute("SELECT 1 FROM hero_deeds WHERE hero_id = ? AND deed = ?",
+                           (row["crafted_by"], text)).fetchone()
+        if dup:
+            return []
+        conn.execute("INSERT INTO hero_deeds (hero_id, deed, floor) VALUES (?,?,?)",
+                     (row["crafted_by"], text, floor_number))
+        return [{"hero_id": row["crafted_by"], "deed": text, "chained": True}]
+    except Exception as e:
+        print(f"Chained smith deed error: {e}")
+        return []
+
+
 def record_deeds(conn, result: dict, floor_number: int, is_boss: bool, is_miniboss: bool) -> list[dict]:
     """Mine a winning combat result for deed-worthy moments. Returns the
     deeds written (for the result payload / toasts). Fail-safe: [] on error."""
@@ -119,6 +169,7 @@ def record_deeds(conn, result: dict, floor_number: int, is_boss: bool, is_minibo
                 conn.execute("INSERT INTO hero_deeds (hero_id, deed, floor) VALUES (?,?,?)",
                              (hid, text, floor_number))
                 written.append({"hero_id": hid, "deed": text})
+                written.extend(_credit_the_smith(conn, hid, text, floor_number))
         return written
     except Exception as e:
         print(f"Deed recording error: {e}")
