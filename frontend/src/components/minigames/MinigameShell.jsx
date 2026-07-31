@@ -65,6 +65,26 @@ export function heroBaseline(star) {
   return HERO_BASELINE_BY_STAR[star] ?? AUTO_RESOLVE_MULT
 }
 
+// The hero a facility's minigame is actually judged against: whoever assigned
+// there is best. Ties break on level, so two 5-stars aren't picked by row
+// order. Returns null when nothing is assigned, which the shell reads as
+// "no one is minding this" and falls back to the flat baseline.
+export function bestAssignedHero(facility) {
+  const staff = facility?.heroes || []
+  if (!staff.length) return null
+  return staff.reduce((best, h) => {
+    const star = (h.ascension_star || 0) > 0 ? h.ascension_star : (h.birth_star || 1)
+    const bStar = (best.ascension_star || 0) > 0 ? best.ascension_star : (best.birth_star || 1)
+    if (star !== bStar) return star > bStar ? h : best
+    return (h.level || 0) > (best.level || 0) ? h : best
+  })
+}
+
+export function effectiveStar(hero) {
+  if (!hero) return null
+  return (hero.ascension_star || 0) > 0 ? hero.ascension_star : (hero.birth_star || 1)
+}
+
 // score 0..1 -> reward multiplier. On tiers with a `ruin` threshold, a score
 // below it returns 0 — the caller treats 0 as CATASTROPHE (work destroyed).
 export function scoreToMult(diff, score) {

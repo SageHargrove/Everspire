@@ -906,10 +906,10 @@ const getGenRate = (fac) => {
         )}
 
         {/* Economy + endgame facility panels */}
-        {fac.type === 'Dining Hall' && <CookingPanel onResourceChange={() => { loadAll(); if (onGoldChange) onGoldChange() }} />}
-        {fac.type === 'Alchemist Lab' && <RefineAetherPanel onResourceChange={() => { loadAll(); if (onGoldChange) onGoldChange() }} />}
+        {fac.type === 'Dining Hall' && <CookingPanel facility={fac} onResourceChange={() => { loadAll(); if (onGoldChange) onGoldChange() }} />}
+        {fac.type === 'Alchemist Lab' && <RefineAetherPanel facility={fac} onResourceChange={() => { loadAll(); if (onGoldChange) onGoldChange() }} />}
         {fac.type === 'Bestiary' && <BestiaryPanel />}
-        {fac.type === 'Shrine' && <ShrineRitePanel onResourceChange={() => loadAll()} />}
+        {fac.type === 'Shrine' && <ShrineRitePanel facility={fac} onResourceChange={() => loadAll()} />}
         {fac.type === 'Reliquary' && <ReliquaryPanel />}
         {fac.type === 'Chronosphere' && <ChronospherePanel onResourceChange={() => { loadAll(); if (onGoldChange) onGoldChange() }} />}
         {fac.type === 'Transcendence Core' && <TranscendencePanel gold={base.gold} onResourceChange={() => { loadAll(); if (onGoldChange) onGoldChange() }} />}

@@ -51,7 +51,7 @@ def get_facilities():
             
             # Load assignments
             assigned = conn.execute("""
-                SELECT fa.facility_id, fa.role, fa.target_hero_id, fa.target_skill_id, h.id, h.name, h.hero_class, h.level, h.portrait_path, h.apt_tactical, h.skills
+                SELECT fa.facility_id, fa.role, fa.target_hero_id, fa.target_skill_id, h.id, h.name, h.hero_class, h.level, h.portrait_path, h.apt_tactical, h.skills, h.birth_star, h.ascension_star
                 FROM facility_assignments fa
                 JOIN heroes h ON fa.hero_id = h.id
                 WHERE h.is_alive = 1

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import GameIcon from './GameIcon'
-import MinigameShell, { AUTO_RESOLVE_MULT } from './minigames/MinigameShell'
+import MinigameShell, { AUTO_RESOLVE_MULT, bestAssignedHero, effectiveStar } from './minigames/MinigameShell'
 import CookSequence from './minigames/CookSequence'
 import StillControl from './minigames/StillControl'
 import SigilTrace from './minigames/SigilTrace'
@@ -26,7 +26,9 @@ function useMsg() {
 
 // ── Dining Hall: cook Farm ingredients into consumables ──────────────
 
-export function CookingPanel({ onResourceChange }) {
+export function CookingPanel({ facility, onResourceChange }) {
+  // Whoever is assigned here is what the player has to beat.
+  const staffer = bestAssignedHero(facility)
   const [catalog, setCatalog] = useState([])
   const [busy, setBusy] = useState(false)
   const [msgEl, setMsg] = useMsg()
@@ -75,6 +77,8 @@ export function CookingPanel({ onResourceChange }) {
       {minigameId && (
         <MinigameShell
           title="SEASON THE POT"
+          heroStar={effectiveStar(staffer)}
+          heroName={staffer?.name}
           flavor="The recipe is old and exact. Take the ladle yourself, or let the kitchen keep its rhythm."
           onSkip={(mult) => doCook(minigameId, mult)}
           onResolve={(mult) => doCook(minigameId, mult)}
@@ -87,7 +91,9 @@ export function CookingPanel({ onResourceChange }) {
 
 // ── Alchemist Lab: refine ingredients + gold into Aether ─────────────
 
-export function RefineAetherPanel({ onResourceChange }) {
+export function RefineAetherPanel({ facility, onResourceChange }) {
+  // Whoever is assigned here is what the player has to beat.
+  const staffer = bestAssignedHero(facility)
   const [busy, setBusy] = useState(false)
   const [msgEl, setMsg] = useMsg()
   // THE STILL minigame — refining opens it; skip = NOVICE baseline yield.
@@ -123,6 +129,8 @@ export function RefineAetherPanel({ onResourceChange }) {
       {minigameBatches != null && (
         <MinigameShell
           title="THE STILL"
+          heroStar={effectiveStar(staffer)}
+          heroName={staffer?.name}
           flavor="Raw mana wants to be anything but Aether. Take the valves yourself, or trust the Lab's steady simmer."
           onSkip={(mult) => doRefine(minigameBatches, mult)}
           onResolve={(mult) => doRefine(minigameBatches, mult)}
@@ -135,7 +143,9 @@ export function RefineAetherPanel({ onResourceChange }) {
 
 // ── Shrine: CONDUCT A RITE — daily ceremony (TRACE THE SIGIL minigame) ──
 
-export function ShrineRitePanel({ onResourceChange }) {
+export function ShrineRitePanel({ facility, onResourceChange }) {
+  // Whoever is assigned here is what the player has to beat.
+  const staffer = bestAssignedHero(facility)
   const [msgEl, setMsg] = useMsg()
   const [showRite, setShowRite] = useState(false)
 
@@ -160,6 +170,8 @@ export function ShrineRitePanel({ onResourceChange }) {
       {showRite && (
         <MinigameShell
           title="TRACE THE SIGIL"
+          heroStar={effectiveStar(staffer)}
+          heroName={staffer?.name}
           flavor="The old pattern waits in the dark. Trace it true, or let the clergy murmur through the standard observance."
           onSkip={(mult) => doRite(mult)}
           onResolve={(mult) => doRite(mult)}
