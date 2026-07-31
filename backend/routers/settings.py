@@ -99,10 +99,39 @@ def set_generation(payload: dict = Body(...)):
     data["image_generation_enabled"] = enabled
     _save(data)
     # Turning it on mid-session should bring ComfyUI up without a restart.
+    # If nothing is installed yet, say so — the caller decides whether to
+    # kick off /generation/install rather than us starting a 9GB download
+    # off the back of a toggle.
+    needs_install = False
     if enabled:
         try:
-            from services.comfy_service import ensure_comfy_running
-            ensure_comfy_running()
+            from services.generation_installer import is_installed
+            needs_install = not is_installed()
         except Exception:
             pass
-    return {"enabled": enabled}
+        if not needs_install:
+            try:
+                from services.comfy_service import ensure_comfy_running
+                ensure_comfy_running()
+            except Exception:
+                pass
+    return {"enabled": enabled, "needs_install": needs_install}
+
+
+# ─── one-click generation setup ─────────────────────────────────────────────
+#
+# Everything INSTALL_GENERATION.bat does, driven from Settings instead, so the
+# player never leaves the game to run a separate script.
+
+@router.get("/generation/install-status")
+def generation_install_status():
+    from services.generation_installer import get_status, has_nvidia_gpu
+    status = get_status()
+    status["gpu"] = has_nvidia_gpu()
+    return status
+
+
+@router.post("/generation/install")
+def generation_install():
+    from services.generation_installer import start_install
+    return start_install()

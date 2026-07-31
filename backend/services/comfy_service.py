@@ -497,10 +497,25 @@ def ensure_comfy_running() -> bool:
         return False  # remote server — nothing to launch locally
     import subprocess, sys
     home = os.path.expanduser("~")
+
+    # Where the in-game installer put it, if it ran. Checked FIRST and read
+    # from app_settings.json rather than an env var, because setx only reaches
+    # new processes — in the packaged build the backend is a thread inside the
+    # launcher, so an env var wouldn't be visible until the player restarted
+    # the game immediately after a 9GB download.
+    settings_dir = None
+    try:
+        from routers.settings import _load
+        settings_dir = _load().get("comfyui_dir")
+    except Exception:
+        pass
+
     cands = [c for c in (
+        settings_dir,
         os.getenv("COMFYUI_DIR"),
         os.path.join(home, "ComfyUI"),
-        # INSTALL_GENERATION.bat's portable layout
+        # in-game installer / INSTALL_GENERATION.bat portable layouts
+        os.path.join(home, "Everspire-Generation", "ComfyUI_windows_portable", "ComfyUI"),
         os.path.join(home, "ToE-Generation", "ComfyUI_windows_portable", "ComfyUI"),
     ) if c]
     cand = next((c for c in cands if os.path.exists(os.path.join(c, "main.py"))), None)

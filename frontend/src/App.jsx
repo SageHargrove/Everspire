@@ -24,7 +24,7 @@ import GuildHall from './components/GuildHall'
 import Social from './components/Social'
 import ProfileCard from './components/ProfileCard'
 import { emitToast } from './toastBus'
-import { getBase, grantResources, clearDevInventory, setDevLevel, grantInventoryItem, listHeroes, getAchievements, getMailList, getChatLogs, getApiKeyStatus, setApiKey, getGenerationEnabled, setGenerationEnabled } from './api/client'
+import { getBase, grantResources, clearDevInventory, setDevLevel, grantInventoryItem, listHeroes, getAchievements, getMailList, getChatLogs, getApiKeyStatus, setApiKey, getGenerationEnabled, setGenerationEnabled, getGenerationInstallStatus, startGenerationInstall } from './api/client'
 import { confirmDialog, alertDialog } from './components/DialogHost'
 import { initAudio, setSoundEnabled, isSoundEnabled, playClick, setBgmVolume, setSfxVolume, setBgmScene } from './audio'
 
@@ -80,6 +80,10 @@ export default function App() {
   const [apiKeySaving, setApiKeySaving] = useState(false)
   const [genEnabled, setGenEnabled] = useState(false)
   const [genSaving, setGenSaving] = useState(false)
+  // Live status of the one-click generation setup (null until it has anything
+  // to say). Polled rather than pushed so closing Settings — or the whole
+  // window — can't strand a 9GB download.
+  const [genInstall, setGenInstall] = useState(null)
   const [soundOn, setSoundOn] = useState(localStorage.getItem('soundEnabled') !== 'false')
   // Background ornament style — live A/B from Settings, persisted per install
   const [bgVariant, setBgVariant] = useState(localStorage.getItem('toe_bg_variant') || 'starfield')
@@ -141,8 +145,24 @@ export default function App() {
     if (showSettings) {
       getApiKeyStatus().then(setApiKeyStatus).catch(() => {})
       getGenerationEnabled().then(r => setGenEnabled(!!r.enabled)).catch(() => {})
+      // Pick up an install that's still running from an earlier session —
+      // the download survives the game being closed, so the UI has to be able
+      // to rejoin one in progress rather than only tracking ones it started.
+      getGenerationInstallStatus().then(st => {
+        if (st && st.state !== 'idle') setGenInstall(st)
+      }).catch(() => {})
     }
   }, [showSettings])
+
+  // Poll only while something is actually installing. Stops on its own at
+  // done/error so a finished setup isn't hitting the API forever.
+  useEffect(() => {
+    if (genInstall?.state !== 'running') return
+    const id = setInterval(() => {
+      getGenerationInstallStatus().then(setGenInstall).catch(() => {})
+    }, 1500)
+    return () => clearInterval(id)
+  }, [genInstall?.state])
 
   useEffect(() => {
     // Global click listener for buttons to play sound
@@ -542,6 +562,18 @@ export default function App() {
                       try {
                         const res = await setGenerationEnabled(!genEnabled)
                         setGenEnabled(!!res.enabled)
+                        // Turning it on with nothing installed starts the ~9GB
+                        // setup here rather than sending the player off to run
+                        // a .bat. The backend reports needs_install so a big
+                        // download is never a silent side effect of a toggle.
+                        if (res.enabled && res.needs_install) {
+                          const st = await getGenerationInstallStatus()
+                          if (!st.gpu) {
+                            emitToast('No NVIDIA GPU detected — heroes will keep using the built-in art.', 'error')
+                          } else {
+                            setGenInstall(await startGenerationInstall())
+                          }
+                        }
                       } catch (e) { emitToast(e.message, 'error') }
                       setGenSaving(false)
                     }}
@@ -554,8 +586,44 @@ export default function App() {
                   >{genSaving ? '…' : genEnabled ? 'ON' : 'OFF'}</button>
                 </div>
                 <div className="text-dim" style={{ fontSize: '0.7rem', fontStyle: 'italic', marginTop: 4 }}>
-                  When ON, your summons render unique portraits on this machine's GPU (needs a local NVIDIA GPU + ComfyUI — see INSTALL_GENERATION.bat). When OFF, heroes use the built-in art pool. Turn it off anytime to free up your GPU mid-session.
+                  When ON, your summons render unique portraits on this machine's GPU. Needs an NVIDIA card — the first time you switch it on, the game downloads what it needs (~9GB) by itself. When OFF, heroes use the built-in art pool. Turn it off anytime to free up your GPU mid-session.
                 </div>
+
+                {/* Setup progress. Only rendered while an install is live or
+                    has something to report — a finished install just leaves
+                    the toggle ON with no leftover UI. */}
+                {genInstall && ['running', 'error', 'no_gpu'].includes(genInstall.state) && (
+                  <div style={{
+                    marginTop: 10, padding: '10px 12px', borderRadius: 6,
+                    border: '1px solid rgba(184,151,98,.3)', background: 'rgba(12,7,24,.5)',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: '.7rem' }}>
+                      <span style={{ color: 'var(--text-hi)' }}>
+                        {genInstall.state === 'running'
+                          ? (genInstall.step || 'Starting…')
+                          : (genInstall.message || 'Setup stopped.')}
+                      </span>
+                      {genInstall.state === 'running' && genInstall.step_total > 0 && (
+                        <span className="text-dim" style={{ whiteSpace: 'nowrap' }}>
+                          step {genInstall.step_index}/{genInstall.step_total}
+                        </span>
+                      )}
+                    </div>
+                    {genInstall.state === 'running' && (
+                      <div style={{ marginTop: 8, height: 4, borderRadius: 2, background: 'rgba(184,151,98,.15)', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', width: `${genInstall.percent ?? 0}%`,
+                          background: 'var(--green-hi)', transition: 'width .4s ease',
+                        }} />
+                      </div>
+                    )}
+                    {genInstall.state === 'running' && (
+                      <div className="text-dim" style={{ fontSize: '.65rem', marginTop: 6, fontStyle: 'italic' }}>
+                        Safe to keep playing, and safe to close — it picks up where it left off.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* profile row — links to the Profile Card, per the mockup */}
@@ -589,7 +657,7 @@ export default function App() {
               </div>
 
               <div style={{ textAlign: 'center', fontFamily: "'Cinzel',serif", fontSize: '0.55rem', letterSpacing: '.2em', color: '#4f4766', marginTop: '0.9rem' }}>
-                TOWER OF ETERNITY · PRE-ALPHA
+                EVERSPIRE · PRE-ALPHA
               </div>
             </div>
           </div>
