@@ -27,9 +27,9 @@ def _ensure_schema(conn):
 
 
 # A weapon good enough to be remembered is good enough for its maker to be
-# remembered with it. Same gate as record_craft_deed — an iron dagger that
-# happens to be held during a boss kill is not a smith's life's work.
-CHAINED_DEED_RARITIES = {"Legendary", "Mythic", "Ascended"}
+# remembered with it. Same gate as record_craft_deed (equipment_service
+# .is_remarkable) — an ordinary blade that happens to be held during a boss
+# kill is not a smith's life's work.
 
 
 def _credit_the_smith(conn, wielder_id: int, deed_text: str, floor_number: int) -> list[dict]:
@@ -54,7 +54,8 @@ def _credit_the_smith(conn, wielder_id: int, deed_text: str, floor_number: int) 
                LIMIT 1""",
             (wielder_id, wielder_id),
         ).fetchone()
-        if not row or row["rarity"] not in CHAINED_DEED_RARITIES:
+        from services.equipment_service import is_remarkable
+        if not row or not is_remarkable(row["rarity"]):
             return []
 
         wielder = conn.execute("SELECT name FROM heroes WHERE id = ?", (wielder_id,)).fetchone()
@@ -208,17 +209,19 @@ def record_base_deed(conn, hero_id: int, text: str, floor_number: int = None) ->
         return None
 
 
-# Rarity is the gate for craft deeds: an iron dagger is a Tuesday, a legendary
-# blade is a life's work. Keeping the threshold here rather than at each call
-# site means one place decides what counts as remarkable.
-CRAFT_DEED_RARITIES = {"Legendary", "Mythic", "Ascended"}
-
-
 def record_craft_deed(conn, smith_id: int, item_name: str, rarity: str) -> dict | None:
-    """The smith remembers making something extraordinary."""
-    if rarity not in CRAFT_DEED_RARITIES:
+    """The smith remembers making something extraordinary.
+
+    The threshold lives in equipment_service.is_remarkable, against the real
+    letter-grade ladder (D- .. Z). It is NOT a set of words: an earlier version
+    of this gate compared rarity against "Legendary"/"Mythic", which matches
+    nothing this game produces, so it silently never fired.
+    """
+    from services.equipment_service import is_remarkable, EQUIPMENT_ADJECTIVES
+    if not is_remarkable(rarity):
         return None
-    return record_base_deed(conn, smith_id, f"Forged {item_name} — {rarity.lower()} work")
+    grade = EQUIPMENT_ADJECTIVES.get(rarity, rarity)
+    return record_base_deed(conn, smith_id, f"Forged {item_name} — {grade.lower()} work")
 
 
 def record_teaching_deed(conn, teacher_id: int, student_name: str, milestone: str) -> dict | None:

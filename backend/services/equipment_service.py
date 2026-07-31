@@ -16,11 +16,33 @@ def origin_forged(smith_name: str = None) -> str:
     return f"Forged by {smith_name}" if smith_name else "Forged at the base"
 
 
+def is_remarkable(rarity: str) -> bool:
+    """Is this piece rare enough to be worth remembering?
+
+    Rarity in this game is LETTER GRADES (RARITY_TIERS: D- through Z), not
+    words. Defined here, against the real ladder, so callers can't drift into
+    inventing names for it — an earlier version of the deed gate compared
+    against "Legendary"/"Mythic", which matches nothing and silently disabled
+    every craft and chained deed.
+
+    A- ("Exceptional") is the line: high enough that a smith reaching it is a
+    genuine event, low enough that it happens more than once a campaign.
+    """
+    try:
+        return RARITY_TIERS.index(rarity) >= RARITY_TIERS.index(REMARKABLE_MIN_RARITY)
+    except (ValueError, AttributeError):
+        return False
+
+
+REMARKABLE_MIN_RARITY = "A-"
+
+
 def origin_floor_drop(floor_number: int, rarity: str = None) -> str:
-    """Drops name the floor, because 'floor 50 legendary chest' is a story and
-    'found' is not."""
-    if rarity in ("Legendary", "Mythic", "Ascended"):
-        return f"Claimed from a {rarity.lower()} cache on floor {floor_number}"
+    """Drops name the floor, because 'floor 50, out of an A+ cache' is a story
+    and 'found' is not."""
+    if is_remarkable(rarity):
+        adjective = EQUIPMENT_ADJECTIVES.get(rarity, rarity)
+        return f"Claimed from a {adjective.lower()} cache on floor {floor_number}"
     return f"Recovered on floor {floor_number}"
 
 def get_vault_capacity(conn) -> int:
