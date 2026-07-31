@@ -231,6 +231,42 @@ def negative_for_class(hero_class: str = None) -> str:
         return NEGATIVE_STYLE + ", " + _NO_SWORD_NEGATIVE
     return NEGATIVE_STYLE
 
+
+# ── gender adherence ────────────────────────────────────────────────────────
+#
+# `1boy` alone does NOT hold. Measured 2026-07-30 across a generated roster:
+# two of three male heroes rendered female, including one whose prompt said
+# BOTH "1boy" and "weathered man in late thirties" and still produced a girl.
+# The base model is booru-trained with a heavy young-female prior, and a lone
+# positive tag loses to it — worst at low star ranks, where the quality prefix
+# is weakest and there are fewest masculine visual anchors.
+#
+# Fixed on both sides. `male focus` is a distinct danbooru tag that pulls far
+# harder than `1boy`, and the negative names the wrong gender directly.
+# Deliberately NO anatomical terms: those are filtered in the LoRA/NSFW
+# posture, and they're unnecessary once `male focus` is carrying the positive.
+GENDER_TAGS = {
+    "male":   "1boy, male focus",
+    "female": "1girl, female focus",
+}
+GENDER_NEGATIVES = {
+    "male":   "1girl, female, feminine",
+    "female": "1boy, male, masculine",
+}
+
+
+def gender_tag_for(gender: str = None) -> str:
+    """Positive-side gender anchor. Unknown gender stays neutral rather than
+    guessing — an androgynous render is a better failure than a wrong one."""
+    return GENDER_TAGS.get((gender or "").lower(), "1person")
+
+
+def negative_for(hero_class: str = None, gender: str = None) -> str:
+    """Class negatives plus the gender the hero is NOT."""
+    neg = negative_for_class(hero_class)
+    gneg = GENDER_NEGATIVES.get((gender or "").lower())
+    return f"{neg}, {gneg}" if gneg else neg
+
 # Pushes generation away from the failure modes seen in practice:
 # soft painterly/semi-realistic rendering, flat vector-poster coloring,
 # crushed-black no-detail faces, loud solid-color backgrounds,
@@ -722,7 +758,7 @@ def _pick_class_for_star(birth_star: int) -> str:
 
 def _prompt_from_traits(traits: dict, hero_class: str, birth_star: int) -> str:
     outfit = CLASS_OUTFITS.get(hero_class, DEFAULT_OUTFIT)
-    gender_tag = "1boy" if traits["gender"] == "male" else "1girl"
+    gender_tag = gender_tag_for(traits["gender"])
     glasses_tag = f", {traits['glasses']}" if traits.get("glasses") else ""
     return (
         f"{gender_tag}, {traits['race']}, {traits['hair']}, {traits['skin']}, {traits['eyes']}, "
@@ -1359,7 +1395,7 @@ def _generate_one_cached(birth_star: int):
         # hires=True: two-pass upscale-refine. Cache fill is a background
         # job, so the ~2x generation time is free — and the second pass is
         # what rescues small faces/eyes at full-body framing.
-        success = generate_portrait_comfy(prompt, filename, negative=negative_for_class(hero_class), hires=True, lora_override=HERO_LORA)
+        success = generate_portrait_comfy(prompt, filename, negative=negative_for(hero_class, gender), hires=True, lora_override=HERO_LORA)
         if success:
             _cutout_with_heal(filename)  # transparent + keep master & self-heal an eroded cut
             add_to_cache(birth_star, filename, gender, hero_class)
@@ -1380,7 +1416,7 @@ def _generate_custom_portrait(hero_id: int, portrait_prompt: str, hero_name: str
         safe_name = re.sub(r'[^a-z0-9]', '_', hero_name.lower())[:30]
         filename = f"{custom_dir}/custom_{safe_name}_{hero_id}_{int(time.time())}.png"
 
-        gender_tag = "1boy" if gender == "male" else "1girl" if gender == "female" else "1person"
+        gender_tag = gender_tag_for(gender)
         full_prompt = (
             f"{gender_tag}, looking at viewer, {_quality_tag(5)}, "
             f"{FRAMING}, {BASE_STYLE}, " + portrait_prompt
@@ -1388,7 +1424,7 @@ def _generate_custom_portrait(hero_id: int, portrait_prompt: str, hero_name: str
         from services.comfy_service import transparent_enabled
         if transparent_enabled():
             full_prompt = _strip_bg_for_transparent(full_prompt)
-        success = generate_portrait_comfy(full_prompt, filename, negative=NEGATIVE_STYLE, lora_override=HERO_LORA)
+        success = generate_portrait_comfy(full_prompt, filename, negative=negative_for(None, gender), lora_override=HERO_LORA)
         if success:
             _cutout_with_heal(filename)  # transparent + keep master & self-heal an eroded cut
             update_hero_portrait(hero_id, filename)
