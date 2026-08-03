@@ -1414,18 +1414,24 @@ def _random_default_portrait(birth_star: int):
     Same file may serve multiple heroes — acceptable for the default pool."""
     if not os.path.isdir(DEFAULT_POOL_DIR):
         return None
-    same_star, any_star = [], []
+    by_star = {}
     for fname in os.listdir(DEFAULT_POOL_DIR):
         parsed = _parse_default_filename(fname) if fname.endswith(".png") else None
         if not parsed:
             continue
         klass, gender, star = parsed
-        entry = (f"{DEFAULT_POOL_DIR}/{fname}", gender, klass)
-        any_star.append(entry)
-        if star == birth_star:
-            same_star.append(entry)
-    pool = same_star or any_star
-    return random.choice(pool) if pool else None
+        by_star.setdefault(star, []).append((f"{DEFAULT_POOL_DIR}/{fname}", gender, klass))
+    if not by_star:
+        return None
+    # Nearest star, not "any star". The pool has historically been top-heavy
+    # while ~71% of gem pulls (95% of gold) are 1-star, so the old `any_star`
+    # fallback dressed common recruits in whatever it found — routinely ornate
+    # 6-star armour. Falling to the CLOSEST tier keeps a 1-star looking like a
+    # 1-star as long as anything low exists, and ties break downward so the
+    # error is "plainer than earned" rather than "legendary for free".
+    if birth_star not in by_star:
+        birth_star = min(by_star, key=lambda s: (abs(s - birth_star), s))
+    return random.choice(by_star[birth_star])
 
 
 def update_hero_portrait(hero_id: int, path: str):
@@ -1538,8 +1544,20 @@ def _generate_one_cached(birth_star: int):
     except Exception as e:
         print(f"[Cache] Error generating {birth_star}★: {e}")
 
-def _generate_custom_portrait(hero_id: int, portrait_prompt: str, hero_name: str, gender: str = "unknown"):
-    """Generate a hero-specific portrait from the LLM's portrait_prompt, in the house style."""
+def _generate_custom_portrait(hero_id: int, portrait_prompt: str, hero_name: str,
+                              gender: str = "unknown", star: int = None,
+                              init_image_path: str = None, denoise: float = 0.5):
+    """Generate a hero-specific portrait from the LLM's portrait_prompt.
+
+    star drives _quality_tag, which is the whole gear/aura escalation ladder.
+    It used to be hardcoded to 5, so a 7-star rendered with 5-star flavour and
+    never read as legendary — and with per-star promotion that would have made
+    the escalation invisible at every rank.
+
+    init_image_path turns this into img2img, which is how a promotion keeps the
+    SAME character instead of rolling a new one. Pass the hero's existing
+    portrait and a middling denoise: high enough to re-cut the gear, low enough
+    that the face, hair and colour identity survive."""
     if not _generation_unlocked():
         return
     try:
@@ -1549,18 +1567,34 @@ def _generate_custom_portrait(hero_id: int, portrait_prompt: str, hero_name: str
         safe_name = re.sub(r'[^a-z0-9]', '_', hero_name.lower())[:30]
         filename = f"{custom_dir}/custom_{safe_name}_{hero_id}_{int(time.time())}.png"
 
+        if star is None:
+            with db() as conn:
+                row = conn.execute("SELECT birth_star FROM heroes WHERE id = ?", (hero_id,)).fetchone()
+            star = (row["birth_star"] if row else 5)
+
         gender_tag = gender_tag_for(gender)
         full_prompt = (
-            f"{gender_tag}, looking at viewer, {_quality_tag(5)}, "
+            f"{gender_tag}, looking at viewer, {_quality_tag(star)}, "
             f"{FRAMING}, {BASE_STYLE}, " + portrait_prompt
         )
         from services.comfy_service import transparent_enabled
         if transparent_enabled():
             full_prompt = _strip_bg_for_transparent(full_prompt)
-        success = generate_portrait_comfy(full_prompt, filename, negative=negative_for(None, gender), lora_override=HERO_LORA)
+        success = generate_portrait_comfy(
+            full_prompt, filename, negative=negative_for(None, gender),
+            lora_override=HERO_LORA,
+            init_image_path=init_image_path,
+            denoise=denoise if init_image_path else 0.45,
+        )
         if success:
             _cutout_with_heal(filename)  # transparent + keep master & self-heal an eroded cut
             update_hero_portrait(hero_id, filename)
+            # First custom portrait becomes the permanent star-up anchor.
+            with db() as conn:
+                conn.execute(
+                    "UPDATE heroes SET portrait_origin = ? WHERE id = ? AND "
+                    "(portrait_origin IS NULL OR portrait_origin = '')",
+                    (filename, hero_id))
             _prewarm_card(hero_id, filename)
             print(f"[Cache] Custom portrait ready for hero {hero_id}")
     except Exception as e:
@@ -1587,23 +1621,107 @@ def queue_custom_portrait(hero_id: int, portrait_prompt: str, hero_name: str, ge
     """A hero is waiting on a portrait right now — jump to the front of the generation queue."""
     _enqueue(PRIORITY_URGENT, _generate_custom_portrait, hero_id, portrait_prompt, hero_name, gender)
 
+# What a star-up looks like. The hero is the same person throughout — only
+# their gear, bearing and presence escalate.
+UPGRADE_TAGS = {
+    2: "better-kept gear, a little more confidence",
+    3: "battle-worn gear, sharper expression",
+    4: "well-made armor, a veteran's bearing",
+    5: "ornate gear, imposing presence",
+    6: "masterwork armor with gold detailing, commanding presence",
+    7: "legendary ornate armor, overwhelming presence",
+}
+
+# How much of the ORIGINAL portrait each star-up is allowed to repaint.
+#
+# Measured on a fixed hero, 2026-08-02:
+#   0.50  identical to the source — no visible promotion at all
+#   0.62  leather begins turning to a light breastplate
+#   0.72  silver cuirass, pauldrons, knee plates; face and hair colour intact
+#   0.82  most armoured, but the red hair streak turns purple — identity gone
+#
+# And chaining each step off the PREVIOUS star was tried and rejected: seven
+# renders at 0.6 held identity perfectly and escalated nothing, because every
+# step re-anchors to its own reference and converges. Anchoring every star back
+# to the original and scaling the denoise is what actually produces a ladder.
+UPGRADE_DENOISE_BY_STAR = {2: 0.50, 3: 0.56, 4: 0.62, 5: 0.68, 6: 0.72, 7: 0.76}
+UPGRADE_DENOISE = 0.62          # fallback for an unexpected star
+
+
+_POOL_LADDER_RE = re.compile(r"^(ev_\d+_[A-Za-z]+_[mf])(\d)\.png$")
+# Highest star the shipped pool renders a ladder for. Above this, non-GPU
+# players get card-frame escalation instead of new art — they rarely reach 5+,
+# and rendering 3 more stars for every pool character trebles the ship size for
+# the least-seen ranks.
+POOL_LADDER_MAX_STAR = 4
+
+
+def _pool_ladder_variant(current_path: str, new_star: int) -> str | None:
+    """The SAME pool character's portrait at a higher star, or None.
+
+    This is how a player with no GPU still sees their hero grow: the shipped
+    pool renders each character at stars 1-4 as one escalating person, so a
+    promotion is a file swap rather than a render. Returns None for a
+    generated (non-pool) portrait or a star past the ladder."""
+    if not current_path or new_star > POOL_LADDER_MAX_STAR:
+        return None
+    m = _POOL_LADDER_RE.match(os.path.basename(current_path))
+    if not m:
+        return None                       # not a laddered pool portrait
+    cand = os.path.join(os.path.dirname(current_path), f"{m.group(1)}{new_star}.png")
+    return cand if os.path.exists(cand) else None
+
+
 def queue_upgrade_portrait(hero_id: int, new_star: int):
-    """Regenerate a hero's portrait at a star-rank milestone (more ornate gear/aura). Urgent — the
-    player is looking at this hero's promotion result right now."""
+    """Re-render a hero's portrait on star-up: the SAME character, escalated.
+
+    Two things make that work, and both were missing:
+      - their original appearance description is reused, so the render isn't
+        starting from just a class name and inventing a new person;
+      - their CURRENT portrait seeds it as an img2img reference, so face, hair
+        and colour identity carry across.
+
+    Urgent — the player is looking at the promotion result right now."""
     def _job():
         with db() as conn:
             hero = conn.execute(
-                "SELECT name, hero_class, gender FROM heroes WHERE id = ?", (hero_id,)
+                "SELECT name, hero_class, gender, portrait_prompt, portrait_path, portrait_origin "
+                "FROM heroes WHERE id = ?", (hero_id,)
             ).fetchone()
         if not hero:
             return
-        upgrade_tag = {
-            3: "battle-worn gear, sharper expression",
-            5: "ornate gear, imposing presence",
-            7: "legendary ornate armor, overwhelming presence",
-        }.get(new_star, "upgraded gear")
-        prompt = f"{hero['hero_class']}, {upgrade_tag}, promoted to {new_star} star rank"
-        _generate_custom_portrait(hero_id, prompt, hero["name"], hero["gender"] or "unknown")
+
+        # No generator? A hero on shipped pool art can still level up visually,
+        # because the pool ships each character as a 1-4 star ladder. Checked
+        # BEFORE the generation guard so it works for players who never turn
+        # generation on — which is most of them.
+        if not _generation_unlocked():
+            swap = _pool_ladder_variant(hero["portrait_path"], new_star)
+            if swap:
+                update_hero_portrait(hero_id, swap)
+                _prewarm_card(hero_id, swap)
+                print(f"[Cache] Hero {hero_id} promoted to {new_star}★ via pool ladder")
+            return
+
+        tag = UPGRADE_TAGS.get(new_star, "upgraded gear")
+        # Their own description if we have it; the class name is the fallback
+        # for heroes summoned before portrait_prompt was persisted.
+        base = (hero["portrait_prompt"] or "").strip() or f"a {hero['hero_class']}"
+        prompt = f"{base}, {tag}"
+
+        # Anchor on the ORIGINAL portrait, never the current one — see
+        # UPGRADE_DENOISE_BY_STAR for why chaining fails. Prefer the retained
+        # black-bg master: the live portrait is a transparent cutout and
+        # feeding alpha into img2img composites unpredictably.
+        ref = hero["portrait_origin"] or hero["portrait_path"]
+        if ref:
+            ref = _find_master(ref) or (ref if os.path.exists(ref) else None)
+
+        _generate_custom_portrait(
+            hero_id, prompt, hero["name"], hero["gender"] or "unknown",
+            star=new_star, init_image_path=ref,
+            denoise=UPGRADE_DENOISE_BY_STAR.get(new_star, UPGRADE_DENOISE),
+        )
     _enqueue(PRIORITY_URGENT, _job)
 
 # ---------------------------------------------------------------------------

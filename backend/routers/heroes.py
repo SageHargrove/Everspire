@@ -1034,9 +1034,12 @@ def promote_hero(hero_id: int):
         """, (hero_id,))
 
         current_class = unlocked_class if unlocked_class else hero["hero_class"]
-        if new_star in [3, 5, 7]:
-            from services.portrait_cache import queue_upgrade_portrait
-            queue_upgrade_portrait(hero_id, new_star)
+        # Every star, not just 3/5/7. The re-render is img2img from their own
+        # portrait now, so each step is a visible upgrade to the same person
+        # rather than a reroll — which is what made a sparse milestone list the
+        # safer choice before.
+        from services.portrait_cache import queue_upgrade_portrait
+        queue_upgrade_portrait(hero_id, new_star)
 
     if new_star == 7:
         msg = f"{hero['name']} has TRANSCENDED. A seventh star burns — the Tower itself takes notice."

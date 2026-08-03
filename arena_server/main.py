@@ -219,10 +219,18 @@ def _issue_token(conn, username: str) -> str:
 
 
 LANDING_HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "landing", "index.html")
-# Where "Download" sends people. GitHub redirects /releases/latest to the newest
-# release, and to the releases index when there are none, so this never 404s
-# even before the first build is published.
-DOWNLOAD_URL = "https://github.com/SageHargrove/Everspire/releases/latest"
+# Where "Download" sends people.
+#
+# /releases/latest/download/<asset> resolves to that exact asset on the newest
+# release, so clicking Download starts the installer downloading immediately —
+# no GitHub page, no picking a file out of a list. The asset name is the
+# contract: tools/make_release.py must keep producing Everspire-Setup.exe.
+#
+# Until the first release exists this 404s, so /download checks and falls back
+# to the releases page rather than dead-ending the button.
+SETUP_ASSET = "Everspire-Setup.exe"
+DOWNLOAD_URL = f"https://github.com/SageHargrove/Everspire/releases/latest/download/{SETUP_ASSET}"
+RELEASES_URL = "https://github.com/SageHargrove/Everspire/releases"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -248,11 +256,30 @@ def root_landing():
             f'<a href="{DOWNLOAD_URL}">Download the game</a></p>')
 
 
+_DL_CACHE = {"ok": None, "at": 0.0}
+
+
 @app.get("/download")
 def download_redirect():
     """One stable link for the landing page's button, so publishing a new
-    release needs no edit here and no redeploy of this server."""
-    return RedirectResponse(DOWNLOAD_URL, status_code=302)
+    release needs no edit here and no redeploy of this server.
+
+    Sends the player straight at the installer asset when it exists, and at the
+    releases page when it doesn't — a button that downloads nothing is worse
+    than one that explains itself. The probe is cached for 5 minutes so this
+    doesn't hit GitHub on every click."""
+    now = time.time()
+    if _DL_CACHE["ok"] is None or now - _DL_CACHE["at"] > 300:
+        try:
+            import urllib.request
+            req = urllib.request.Request(DOWNLOAD_URL, method="HEAD")
+            with urllib.request.urlopen(req, timeout=5) as r:
+                _DL_CACHE["ok"] = r.status < 400
+        except Exception:
+            _DL_CACHE["ok"] = False
+        _DL_CACHE["at"] = now
+    return RedirectResponse(DOWNLOAD_URL if _DL_CACHE["ok"] else RELEASES_URL,
+                            status_code=302)
 
 
 @app.get("/status")

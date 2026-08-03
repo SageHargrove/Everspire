@@ -205,6 +205,13 @@ def finalize_hero_async(hero_id: int, birth_star: int, aptitudes: dict, extra_pr
                         final_gender, getattr(profile, "ego_type", None),
                         getattr(profile, "battle_tendency", None), hero_id
                     ))
+            # The LLM writes the real appearance description; overwrite the
+            # placeholder one stored at insert so a later star-up escalates
+            # what the player actually sees.
+            if getattr(profile, "portrait_prompt", None):
+                with db() as conn:
+                    conn.execute("UPDATE heroes SET portrait_prompt=? WHERE id=?",
+                                 (profile.portrait_prompt, hero_id))
             if needs_custom_portrait and not preserve_identity:
                 queue_custom_portrait(hero_id, profile.portrait_prompt, profile.name, final_gender)
         except Exception as e:
@@ -411,8 +418,8 @@ def _create_one_hero(birth_star: int, is_synergy: bool = False, is_leader: bool 
                 birth_star, hero_class, hidden_class, can_pilot, level, skills, traits,
                 health, max_health, strength, intelligence, defense, endurance, agility, willpower, luck,
                 apt_combat, apt_tactical, apt_survival, apt_mental, apt_leadership, apt_diligence,
-                synergy_group, ego_type
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                synergy_group, ego_type, portrait_prompt
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             profile.name, profile.title, profile.backstory,
             profile.personality, portrait_path, getattr(profile, "gender", "unknown"),
@@ -420,7 +427,10 @@ def _create_one_hero(birth_star: int, is_synergy: bool = False, is_leader: bool 
             stats["health"], stats["max_health"], stats["strength"], stats["intelligence"], stats["defense"], stats["endurance"], stats["agility"], stats["willpower"], stats["luck"],
             aptitudes["apt_combat"], aptitudes["apt_tactical"], aptitudes["apt_survival"],
             aptitudes["apt_mental"], aptitudes["apt_leadership"], aptitudes["apt_diligence"],
-            current_synergy, getattr(profile, "ego_type", None)
+            current_synergy, getattr(profile, "ego_type", None),
+            # Kept so a star-up can escalate THIS hero rather than invent a new
+            # one from the class name (see queue_upgrade_portrait).
+            getattr(profile, "portrait_prompt", None),
         ))
         hero_id = cursor.lastrowid
 
@@ -956,8 +966,9 @@ def spark_redeem():
                 name, title, backstory, personality, portrait_path, gender,
                 birth_star, hero_class, hidden_class, can_pilot, level, skills, traits,
                 health, max_health, strength, intelligence, defense, endurance, agility, willpower, luck,
-                apt_combat, apt_tactical, apt_survival, apt_mental, apt_leadership, apt_diligence
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                apt_combat, apt_tactical, apt_survival, apt_mental, apt_leadership, apt_diligence,
+                portrait_prompt
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             profile.name, profile.title, profile.backstory,
             profile.personality, portrait_path, getattr(profile, "gender", "unknown"),
@@ -965,7 +976,8 @@ def spark_redeem():
             stats["health"], stats["max_health"], stats["strength"], stats["intelligence"], stats["defense"], stats["endurance"], stats["agility"], stats["willpower"], stats["luck"],
             aptitudes["apt_combat"], aptitudes["apt_tactical"],
             aptitudes["apt_survival"], aptitudes["apt_mental"],
-            aptitudes["apt_leadership"], aptitudes["apt_diligence"]
+            aptitudes["apt_leadership"], aptitudes["apt_diligence"],
+            getattr(profile, "portrait_prompt", None),
         ))
         hero_id = cursor.lastrowid
 

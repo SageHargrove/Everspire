@@ -812,6 +812,29 @@ WHERE NOT EXISTS (SELECT 1 FROM recipes WHERE name = 'Void Ring');
         except sqlite3.OperationalError:
             pass
 
+        # The appearance description a hero's portrait was drawn from.
+        # Without it, a promotion re-render had nothing to go on but the class
+        # name, so a hero came back as a completely different person wearing
+        # the same job title. Star-up is supposed to be the SAME character,
+        # escalated — that needs their original description kept.
+        try:
+            conn.execute("ALTER TABLE heroes ADD COLUMN portrait_prompt TEXT")
+            print("[DB] Migrated: added column 'portrait_prompt' to heroes")
+        except sqlite3.OperationalError:
+            pass
+
+        # The hero's FIRST portrait, kept as the permanent img2img anchor for
+        # every later star-up. Chaining each promotion off the previous image
+        # was measured and does not work: identity locks perfectly but the gear
+        # never escalates, because each step re-anchors and converges. Coming
+        # back to the original every time with a denoise that scales by star
+        # gives a real 1->7 progression and cannot compound drift.
+        try:
+            conn.execute("ALTER TABLE heroes ADD COLUMN portrait_origin TEXT")
+            print("[DB] Migrated: added column 'portrait_origin' to heroes")
+        except sqlite3.OperationalError:
+            pass
+
         # Gifting/loyalty track (0-100) — raised by gifts (services/
         # gift_service.py), consumed by upcoming loyalty/raid mechanics.
         try:

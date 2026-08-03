@@ -406,6 +406,57 @@ h1, h2, h3, .title-font {
   box-shadow: 0 2px 6px rgba(0,0,0,0.6);
 }
 
+/* ── Star-tier card frames ─────────────────────────────────────────────────
+   tierForStar() in HeroCard.jsx: 1-2 bronze, 3-4 silver, 5-6 gold, 7 prismatic.
+   These classes were being emitted with no styling behind them at all.
+
+   They carry real weight now: the shipped art pool renders each character as a
+   1-4 star ladder, so a player with no GPU sees their hero's ARTWORK grow to
+   4 stars and the FRAME keep escalating past it. Rendering stars 5-7 for every
+   pool character would treble the download for the ranks fewest players reach.
+
+   Drawn as ::after on .card-frame, which is the parallax perspective root — so
+   the frame stays flat while the art tilts behind it, reading as a window
+   rather than a sticker. */
+.card-frame::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 5px;
+  pointer-events: none;
+  z-index: 8;
+  transition: box-shadow .25s ease, border-color .25s ease;
+  border: 1px solid transparent;
+}
+.card-frame-bronze::after {
+  border-color: rgba(150, 106, 62, 0.55);
+}
+.card-frame-silver::after {
+  border-color: rgba(178, 186, 199, 0.7);
+  box-shadow: 0 0 9px rgba(178, 186, 199, 0.2);
+}
+.card-frame-gold::after {
+  border-color: rgba(201, 168, 76, 0.85);
+  box-shadow: 0 0 14px rgba(201, 168, 76, 0.3), inset 0 0 12px rgba(201, 168, 76, 0.12);
+}
+/* 7★ is the ceiling and is meant to feel like one. Slow so it reads as a
+   sheen on metal, not a disco light. */
+.card-frame-prismatic::after {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
+    linear-gradient(115deg, #ff7ae0, #c9a84c, #7ad4ff, #ff7ae0) border-box;
+  border: 2px solid transparent;
+  box-shadow: 0 0 20px rgba(255, 122, 224, 0.28);
+  animation: prismatic-sheen 7s linear infinite;
+}
+@keyframes prismatic-sheen {
+  to { filter: hue-rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-frame-prismatic::after { animation: none; }
+}
+
 /* ── Parallax card art ─────────────────────────────────────────────────────
    ParallaxCard.jsx publishes --px / --py in [-1, 1] from the pointer (or
    device tilt) and nothing else; every pixel of motion below is CSS, so it
