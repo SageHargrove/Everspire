@@ -39,7 +39,9 @@ echo [2/4] Downloading the art model (~7GB — grab a coffee)...
 curl -L -C - -o "%COMFY%\models\checkpoints\noobaiXLNAIXL_vPred10Version.safetensors" "https://huggingface.co/Laxhar/noobai-XL-Vpred-1.0/resolve/main/NoobAI-XL-Vpred-v1.0.safetensors" || goto fail
 
 echo [3/5] Downloading the Everspire style models (~450MB)...
-curl -L -C - -o "%COMFY%\models\loras\ToE_Heroes_Main.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/ToE_Heroes_Main.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\Everspire_Heroes_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Heroes_v1.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\Everspire_Monsters_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Monsters_v1.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\Everspire_Env_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Env_v1.safetensors" || goto fail
 curl -L -C - -o "%COMFY%\models\loras\AddMicroDetails_NoobAI_v5.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/AddMicroDetails_NoobAI_v5.safetensors" || goto fail
 
 echo [4/5] Installing the content-aware cutout (transparent hero art, ~200MB)...

@@ -37,8 +37,15 @@ CHECKPOINT_NAME = "noobaiXLNAIXL_vPred10Version.safetensors"
 # the way normal repo URLs do. Re-verify these two return 200 after any future
 # rename, or every player's generation install fails at the LoRA step.
 _LFS = "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras"
+# The Everspire adapters replaced the manhwa-derived ToE_Heroes_Main on
+# 2026-08-03. Env is included because facility art generation used ScenicILL,
+# a third-party LoRA that was never in this list — so that feature failed
+# silently for every player. Anything portrait_cache names as a LoRA must
+# appear here or it only works on the dev machine.
 LORAS = [
-    (f"{_LFS}/ToE_Heroes_Main.safetensors", "ToE_Heroes_Main.safetensors"),
+    (f"{_LFS}/Everspire_Heroes_v1.safetensors", "Everspire_Heroes_v1.safetensors"),
+    (f"{_LFS}/Everspire_Monsters_v1.safetensors", "Everspire_Monsters_v1.safetensors"),
+    (f"{_LFS}/Everspire_Env_v1.safetensors", "Everspire_Env_v1.safetensors"),
     (f"{_LFS}/AddMicroDetails_NoobAI_v5.safetensors", "AddMicroDetails_NoobAI_v5.safetensors"),
 ]
 

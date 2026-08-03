@@ -88,22 +88,35 @@ BASE_STYLE = (
 )
 
 # ---------------------------------------------------------------------------
-# Per-pipeline LoRA stacks (final call 2026-07-10): heroes use the manhwa-
-# trained main LoRA PURE — the combo stack that mixed the v2 distill in was
-# rejected (distill style bleeds into heroes: darker, flatter). Monsters keep
-# the distill, whose creature renders beat the main LoRA outright.
-#   ToE_Heroes_Main = was Real_Tower_of_Eternity_epoch_10 (manhwa-trained)
-#   ToE_Monsters    = was Tower_of_Eternity_v2_epoch_7 (distill; monsters only)
-# Env vars override for experiments without code edits.
+# Per-pipeline LoRA stacks — MIGRATED 2026-08-03 off the manhwa-derived
+# adapters and onto the Everspire set trained from ChatGPT-authored source art.
+#
+# That migration was the entire point of training them. The old stack
+# (ToE_Heroes_Main = Real_Tower_of_Eternity_epoch_10, ToE_Monsters =
+# Tower_of_Eternity_v2_epoch_7) was trained on manhwa panels, which is a
+# copyright exposure that scales with every asset shipped. The replacements
+# carry no such lineage.
+#
+# Strength is 0.75 rather than the old 0.65: these adapters are trained on a
+# smaller, cleaner set and need more weight to hold the style against NoobAI's
+# own prior. Measured — at 0.6 and below, equipment prompts render an anime
+# girl instead of the object, and monsters drift back toward humanoids.
+#
+# Env vars still override for experiments without code edits.
 # ---------------------------------------------------------------------------
 HERO_LORA = os.getenv("COMFY_LORA_HERO", (
-    "ToE_Heroes_Main.safetensors:0.65,"
+    "Everspire_Heroes_v1.safetensors:0.75,"
     "AddMicroDetails_NoobAI_v5.safetensors:0.3"
 ))
 MONSTER_LORA = os.getenv("COMFY_LORA_MONSTER", (
-    "ToE_Monsters.safetensors:0.65,"
+    "Everspire_Monsters_v1.safetensors:0.75,"
     "AddMicroDetails_NoobAI_v5.safetensors:0.3"
 ))
+# Equipment icons and zone/floor scenery each have their own adapter now.
+# ENV_GEN_LORA below still points at ScenicILL for facility/environment
+# generation; floors specifically use the Everspire adapter.
+EQUIPMENT_LORA = os.getenv("COMFY_LORA_EQUIPMENT", "Everspire_Equipment_v1.safetensors:0.8")
+FLOORS_LORA = os.getenv("COMFY_LORA_FLOORS", "Everspire_Floors_v1.safetensors:0.85")
 
 # Full-body, fixed framing. A single full-body asset is stored per hero and
 # cropped two ways in the UI (card = head/chest via object-position:top; the
@@ -411,9 +424,17 @@ MONSTER_GEN_BOOST = (
 # prompting, save it! That will be how we generate environments from now on."
 # Validated on 6 varied biomes (throne hall, crystal cavern, misty swamp, sky
 # ruins, volcanic forge, moonlit library) + the 10 zone backgrounds.
-# ScenicILL ALONE (EldRinBac was rejected); hires two-pass; landscape 1216x832.
-# DO NOT tweak without a fresh A/B in front of Liam.
-ENV_GEN_LORA = "ScenicILL.safetensors:0.8"
+# Was ScenicILL ALONE (EldRinBac rejected); hires two-pass; landscape 1216x832.
+# The PROMPT recipe below is the approved part and is unchanged.
+#
+# LoRA swapped to Everspire_Env_v1 on 2026-08-03, for two reasons:
+#   1. ScenicILL is a third-party adapter and was NEVER DISTRIBUTED — it is not
+#      in generation/loras and neither installer fetches it, so facility art
+#      generation failed silently for every player who wasn't Liam.
+#   2. Everspire_Env_v1 is trained on this game's own 81 facility interiors,
+#      which is exactly what this constant renders.
+# Ships with the game, matches the art, no external lineage.
+ENV_GEN_LORA = os.getenv("COMFY_LORA_ENV", "Everspire_Env_v1.safetensors:0.85")
 ENV_GEN_PROMPT = (
     "no humans, no creatures, empty scenery, dark fantasy, {tags}, "
     "intricate detailed background, atmospheric lighting, "
@@ -853,14 +874,30 @@ def pop_cached_portrait(birth_star: int, class_name: str = None):
             row = conn.execute("""
                 SELECT id, path, gender, class_name FROM portrait_cache
                 WHERE birth_star = ? AND used = 0 AND class_name = ?
-                ORDER BY created_at ASC
+                -- RANDOM, not created_at. The shipped pool is seeded in
+                -- directory order, which is alphabetical by class, so FIFO
+                -- handed a new player Acolyte, Acolyte, Alchemist,
+                -- Alchemist... for their first pulls. Any unused cached
+                -- portrait is equally valid, so there is nothing to gain
+                -- from insertion order and a roster's worth of variety to
+                -- lose. (The old pool masked this: its filenames happened
+                -- to enumerate in mixed class order.)
+                ORDER BY RANDOM()
                 LIMIT 1
             """, (birth_star, class_name)).fetchone()
         if not row:
             row = conn.execute("""
                 SELECT id, path, gender, class_name FROM portrait_cache
                 WHERE birth_star = ? AND used = 0
-                ORDER BY created_at ASC
+                -- RANDOM, not created_at. The shipped pool is seeded in
+                -- directory order, which is alphabetical by class, so FIFO
+                -- handed a new player Acolyte, Acolyte, Alchemist,
+                -- Alchemist... for their first pulls. Any unused cached
+                -- portrait is equally valid, so there is nothing to gain
+                -- from insertion order and a roster's worth of variety to
+                -- lose. (The old pool masked this: its filenames happened
+                -- to enumerate in mixed class order.)
+                ORDER BY RANDOM()
                 LIMIT 1
             """, (birth_star,)).fetchone()
         if not row:

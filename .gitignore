@@ -76,3 +76,9 @@ docs/cutout-repair.png
 docs/showcase/
 docs/equipment-sample/
 docs/inpaint-poc/
+
+# Retired manhwa-derived art, archived at migration rather than deleted.
+backend/static/portraits/_archive_manhwa_*/
+backend/static/portraits/_base_pool_staging/
+backend/static/portraits/_enemies_staging/
+frontend/public/images/_floors_staging/
