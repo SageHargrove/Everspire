@@ -132,7 +132,11 @@ def generate_for_facility(slug: str, tier: int, wall_tier: int) -> bool:
         w, h = ENV_GEN_SIZE
         ok = generate_portrait_comfy(
             ENV_GEN_PROMPT.format(tags=tags), out,
-            negative=ENV_GEN_NEGATIVE, hires=True,
+            # No FaceDetailer: these are ROOMS. The pass exists so a hero's
+            # face survives the base's shoulders-up view; a forge has no face
+            # to fix, so it is ~20 sampler steps spent on nothing. hires stays
+            # on — facility art IS displayed large.
+            negative=ENV_GEN_NEGATIVE, hires=True, face_detail=False,
             lora_override=ENV_GEN_LORA, width=w, height=h,
             control_image_path=(ref if slug != "wall" else None),
             control_mode=CONTROL_MODE,

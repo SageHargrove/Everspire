@@ -71,3 +71,8 @@ dist/
 
 # Regenerable review artifact (tools/recut_hero_cutouts.py writes it).
 docs/cutout-repair.png
+
+# Generation review artifacts (regenerable; sheets are large PNGs).
+docs/showcase/
+docs/equipment-sample/
+docs/inpaint-poc/

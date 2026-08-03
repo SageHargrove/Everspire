@@ -127,7 +127,14 @@ def _build_workflow(prompt: str, negative: str = "", seed: int = None, init_imag
     # a second look at the full composition instead of trying to render all
     # that detail in one pass.
     final_samples_source = ["3", 0]
-    if hires and not init_image_name:
+    # hires now applies to img2img too, and that matters: a star-up re-render
+    # is img2img, so skipping it meant every promotion came back at base
+    # resolution with no refinement pass while the ORIGINAL had both. The
+    # "upgrade" was visibly softer and less detailed than the 1-star it came
+    # from. Node 13 upscales the sampler latent, which exists on the img2img
+    # path exactly as it does on the txt2img one, so this is a free correction.
+    # Callers that don't want the extra pass simply leave hires False.
+    if hires:
         final_samples_source = ["14", 0]
 
     workflow = {
@@ -320,7 +327,14 @@ def _build_workflow(prompt: str, negative: str = "", seed: int = None, init_imag
         "class_type": "KSampler"
     }
 
-    if hires and not init_image_name:
+    # hires now applies to img2img too, and that matters: a star-up re-render
+    # is img2img, so skipping it meant every promotion came back at base
+    # resolution with no refinement pass while the ORIGINAL had both. The
+    # "upgrade" was visibly softer and less detailed than the 1-star it came
+    # from. Node 13 upscales the sampler latent, which exists on the img2img
+    # path exactly as it does on the txt2img one, so this is a free correction.
+    # Callers that don't want the extra pass simply leave hires False.
+    if hires:
         # LayerDiffuse needs the final image on a /64 grid (see the snap at the
         # top); round the hires target to /64 in transparent mode, else /8.
         _grid = 64 if transparent else 8
@@ -603,7 +617,12 @@ def _upload_image(file_path: str) -> str | None:
         return None
 
 
-def generate_portrait_comfy(prompt: str, save_path: str, init_image_path: str = None, denoise: float = 0.45, negative: str = "", width: int = 832, height: int = 1216, hires: bool = False, hires_denoise: float = 0.62, lora_override: str = None, lora_strength_override: float = None, _noise_retry: bool = False, control_image_path: str = None, control_strength: float = 0.55, control_end: float = 0.5, control_mode: str = 'canny', transparent: bool = None, rembg_cutout: bool = None) -> bool:
+def generate_portrait_comfy(prompt: str, save_path: str, init_image_path: str = None, denoise: float = 0.45, negative: str = "", width: int = 832, height: int = 1216, hires: bool = False, hires_denoise: float = 0.62, lora_override: str = None, lora_strength_override: float = None, _noise_retry: bool = False, control_image_path: str = None, control_strength: float = 0.55, control_end: float = 0.5, control_mode: str = 'canny', transparent: bool = None, rembg_cutout: bool = None, face_detail: bool = None) -> bool:
+    """face_detail: None follows the COMFY_FACE_DETAILER default; False skips
+    the detect-and-inpaint pass outright. Callers rendering things with no face
+    — monsters, rooms, equipment — should pass False. It was previously only
+    reachable through the internal retry helper, so those callers had no way to
+    turn it off and every spider paid for a face pass."""
     if not is_comfy_running():
         print("[ComfyUI] Server not running — skipping.")
         return False
@@ -622,7 +641,12 @@ def generate_portrait_comfy(prompt: str, save_path: str, init_image_path: str = 
         control_image_name = _upload_image(control_image_path)
 
     def _wf(fd=None, tp=None, rb=None):
-        return _build_workflow(prompt, negative=negative, init_image_name=init_image_name, denoise=denoise, width=width, height=height, hires=hires, hires_denoise=hires_denoise, lora_override=lora_override, lora_strength_override=lora_strength_override, face_detail=fd, control_image_name=control_image_name, control_strength=control_strength, control_end=control_end, control_mode=control_mode, transparent=(transparent if tp is None else tp), rembg_cutout=(rembg_cutout if rb is None else rb))
+        # fd=None means "caller had no opinion" — fall back to the function's
+        # face_detail argument, which itself defaults to the global. An explicit
+        # False from either level must survive, hence the `is None` checks
+        # rather than `or`.
+        eff_fd = face_detail if fd is None else fd
+        return _build_workflow(prompt, negative=negative, init_image_name=init_image_name, denoise=denoise, width=width, height=height, hires=hires, hires_denoise=hires_denoise, lora_override=lora_override, lora_strength_override=lora_strength_override, face_detail=eff_fd, control_image_name=control_image_name, control_strength=control_strength, control_end=control_end, control_mode=control_mode, transparent=(transparent if tp is None else tp), rembg_cutout=(rembg_cutout if rb is None else rb))
 
     workflow = _wf()
     prompt_id = _queue_prompt(workflow)

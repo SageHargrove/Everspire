@@ -650,14 +650,52 @@ def _pick_hair_color(birth_star: int) -> str:
     colors = [c[0] for c in NATURAL_HAIR]
     weights = [c[1] for c in NATURAL_HAIR]
     return random.choices(colors, weights=weights, k=1)[0]
+# Hair is chosen for SILHOUETTE, not adjective. The old male list had six
+# entries but only about two shapes — "short messy", "slicked back", "undercut"
+# and "wild spiky" all render as the same short dark anime-boy hair, so every
+# man came out looking like the same person. The female list already worked
+# because braids/bob/ponytail/bun are structurally different outlines, and that
+# is the property that actually reads at card size.
 HAIR_STYLES_MALE = [
-    "short messy hair", "slicked back hair", "long hair tied back",
-    "undercut", "wild spiky hair", "shoulder-length hair",
+    "short cropped hair", "long loose hair past the shoulders",
+    "a topknot with shaved sides", "a thick braid down his back",
+    "wild spiky hair", "shoulder-length hair parted in the middle",
+    "tight short curls", "chin-length hair falling over one eye",
+    "a shaved head", "a long ponytail",
 ]
 HAIR_STYLES_FEMALE = [
     "long flowing hair", "twin braids", "short bob cut", "high ponytail",
-    "wavy shoulder-length hair", "messy bun",
+    "wavy shoulder-length hair", "messy bun", "a shaved undercut with long top",
+    "waist-length straight hair", "short tousled pixie cut", "a crown braid",
 ]
+
+# Male faces had NO differentiator beyond hair: no facial hair existed anywhere
+# in the vocabulary, so every man was a clean-shaven youth. Weighted so
+# clean-shaven stays the common case (it suits the art style) while beards are
+# frequent enough to break up a roster.
+FACIAL_HAIR = [
+    ("clean-shaven", 40), ("light stubble", 18), ("a short well-kept beard", 14),
+    ("a full thick beard", 10), ("a trimmed goatee", 8),
+    ("a long braided beard", 5), ("a heavy moustache", 5),
+]
+
+# Age and build apply to everyone. Without them every hero was a lithe young
+# adult, which flattens a 90-strong roster badly.
+AGE_LOOKS = [
+    ("young adult", 45), ("in their late twenties", 20),
+    ("mature, in their forties with weathered features", 18),
+    ("older, with a deeply lined face and grey at the temples", 12),
+    ("very young, barely more than a teenager", 5),
+]
+BUILDS = [
+    ("lean athletic build", 34), ("broad muscular build", 24),
+    ("slight wiry build", 18), ("tall rangy build", 14),
+    ("heavyset powerful build", 10),
+]
+
+
+def _weighted(pairs):
+    return random.choices([p[0] for p in pairs], weights=[p[1] for p in pairs], k=1)[0]
 
 SKIN_TONES = ["pale skin", "fair skin", "tan skin", "dark skin", "olive skin", "deep brown skin"]
 
@@ -749,6 +787,11 @@ def _random_traits(birth_star: int = 1, gender: str = "unknown", hero_class: str
         "feature": random.choice(DISTINGUISHING_FEATURES),
         "expression": random.choice(EXPRESSIONS),
         "glasses": _glasses_trait(hero_class),
+        "age": _weighted(AGE_LOOKS),
+        "build": _weighted(BUILDS),
+        # Male only — asking a female portrait for facial hair produces exactly
+        # what you'd expect.
+        "facial_hair": _weighted(FACIAL_HAIR) if gender == "male" else None,
     }
 
 def _pick_class_for_star(birth_star: int) -> str:
@@ -760,8 +803,12 @@ def _prompt_from_traits(traits: dict, hero_class: str, birth_star: int) -> str:
     outfit = CLASS_OUTFITS.get(hero_class, DEFAULT_OUTFIT)
     gender_tag = gender_tag_for(traits["gender"])
     glasses_tag = f", {traits['glasses']}" if traits.get("glasses") else ""
+    beard_tag = f", {traits['facial_hair']}" if traits.get("facial_hair") else ""
+    age_tag = f", {traits['age']}" if traits.get("age") else ""
+    build_tag = f", {traits['build']}" if traits.get("build") else ""
     return (
-        f"{gender_tag}, {traits['race']}, {traits['hair']}, {traits['skin']}, {traits['eyes']}, "
+        f"{gender_tag}, {traits['race']}{age_tag}{build_tag}, {traits['hair']}, "
+        f"{traits['skin']}, {traits['eyes']}{beard_tag}, "
         f"{traits['expression']}, {traits['feature']}{glasses_tag}, {outfit}, {_tier_flavor(birth_star)}, "
         f"looking at viewer, {_quality_tag(birth_star)}, "
         f"{_random_pose(hero_class)}, {FRAMING}, {BASE_STYLE}"
@@ -1573,9 +1620,17 @@ def _generate_custom_portrait(hero_id: int, portrait_prompt: str, hero_name: str
             star = (row["birth_star"] if row else 5)
 
         gender_tag = gender_tag_for(gender)
+        # _tier_flavor is what actually escalates a hero by rank — "humble
+        # commoner attire, frayed hems" at 1 star through "godlike legendary
+        # being, elaborate ornate armor, overwhelming presence" at 7. It was
+        # missing here entirely, and it is applied in only one other place
+        # (_prompt_from_traits), so the LLM path and EVERY star-up rendered
+        # with no rank instruction at all. That, not _quality_tag, is why a
+        # 7-star never looked legendary: _quality_tag returns the same
+        # "highly detailed face, masterpiece" for every rank.
         full_prompt = (
             f"{gender_tag}, looking at viewer, {_quality_tag(star)}, "
-            f"{FRAMING}, {BASE_STYLE}, " + portrait_prompt
+            f"{FRAMING}, {BASE_STYLE}, {_tier_flavor(star)}, " + portrait_prompt
         )
         from services.comfy_service import transparent_enabled
         if transparent_enabled():
@@ -1623,13 +1678,24 @@ def queue_custom_portrait(hero_id: int, portrait_prompt: str, hero_name: str, ge
 
 # What a star-up looks like. The hero is the same person throughout — only
 # their gear, bearing and presence escalate.
+# CONCRETE, ADDITIVE gear. The first pass at these was adjectival — "better-kept
+# gear", "well-made armor" — and produced no visible change at all, because
+# there is nothing in "well-made" for the sampler to actually draw. Each rung
+# now names PARTS being added over the same outfit, which is what makes a
+# promotion read as the same person re-equipped rather than the same picture.
 UPGRADE_TAGS = {
-    2: "better-kept gear, a little more confidence",
-    3: "battle-worn gear, sharper expression",
-    4: "well-made armor, a veteran's bearing",
-    5: "ornate gear, imposing presence",
-    6: "masterwork armor with gold detailing, commanding presence",
-    7: "legendary ornate armor, overwhelming presence",
+    2: "wearing added leather bracers and a reinforced belt over the same outfit",
+    3: "wearing steel shoulder guards and a heavier layered tunic over the same outfit, "
+       "a longer cloak",
+    4: "wearing a polished steel breastplate, matching pauldrons and greaves over the "
+       "same outfit, a fur-lined cloak, sharper veteran bearing",
+    5: "wearing ornate engraved plate armor with gold filigree over the same outfit, "
+       "a flowing embroidered cloak, imposing presence",
+    6: "wearing masterwork armor of silver and gold with etched sigils, a heavy "
+       "trimmed mantle, faint glowing accents, commanding presence",
+    7: "wearing legendary ornate armor with radiant gold detailing and a soaring "
+       "crested helm at their side, a vast billowing cloak, overwhelming presence, "
+       "a faint aura of light",
 }
 
 # How much of the ORIGINAL portrait each star-up is allowed to repaint.
