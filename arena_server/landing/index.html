@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Everspire</title>
+<meta name="description" content="A roguelike tower-climbing gacha RPG. Your heroes die and stay dead.">
+<style>
+  :root {
+    --bg: #0b0910; --panel: #16121d; --line: #2e2739;
+    --gold: #c9a84c; --text: #d8d2e2; --hi: #f0ecf7; --dim: #8b81a3;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(ellipse at 50% -10%, #1b1526 0%, var(--bg) 60%);
+    color: var(--text); font-family: Georgia, 'Times New Roman', serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 4rem 1.5rem 3rem; line-height: 1.65;
+  }
+  main { max-width: 44rem; width: 100%; }
+  h1 {
+    font-size: clamp(2.4rem, 8vw, 3.6rem); letter-spacing: .22em;
+    text-transform: uppercase; color: var(--gold); margin: 0 0 .4rem;
+    text-shadow: 0 0 28px rgba(201,168,76,.28);
+  }
+  .tag { color: var(--dim); font-style: italic; margin: 0 0 2.6rem; font-size: 1.05rem; }
+  .cta { display: flex; flex-wrap: wrap; gap: .9rem; align-items: center; margin-bottom: 1rem; }
+  a.btn {
+    display: inline-block; padding: .85rem 2.1rem; border-radius: 4px;
+    background: var(--gold); color: #17130a; font-weight: bold;
+    text-decoration: none; letter-spacing: .09em; text-transform: uppercase;
+    font-size: .95rem; border: 1px solid #e0bd63;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  a.btn:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(201,168,76,.3); }
+  a.btn.ghost { background: transparent; color: var(--gold); border-color: #4a3f5c; }
+  .note { font-size: .85rem; color: var(--dim); margin: .2rem 0 3rem; }
+  h2 {
+    font-size: .82rem; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--dim); border-bottom: 1px solid var(--line);
+    padding-bottom: .5rem; margin: 2.6rem 0 1rem; font-weight: normal;
+  }
+  ul { padding-left: 1.1rem; margin: 0; }
+  li { margin-bottom: .55rem; }
+  li b { color: var(--hi); font-weight: normal; }
+  .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 1.1rem 1.25rem; }
+  .card h3 { margin: 0 0 .35rem; font-size: 1rem; color: var(--gold); font-weight: normal; }
+  .card p { margin: 0; font-size: .9rem; color: var(--dim); }
+  footer { margin-top: 3.5rem; font-size: .8rem; color: #5f5875; }
+  code { background: #1e1828; padding: .1rem .35rem; border-radius: 3px; font-size: .85em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Everspire</h1>
+  <p class="tag">A roguelike tower-climbing gacha RPG. Your heroes die, and they stay dead.</p>
+
+  <div class="cta">
+    <a class="btn" href="/download">Download for Windows</a>
+    <a class="btn ghost" href="https://github.com/SageHargrove/Everspire/releases">All versions</a>
+  </div>
+  <p class="note">
+    Free playtest build &middot; Windows 10/11 &middot; ~1&nbsp;GB.
+    Not code-signed yet, so Windows will show a &ldquo;protected your PC&rdquo;
+    warning on first launch &mdash; click <em>More info</em> &rarr; <em>Run anyway</em>.
+  </p>
+
+  <h2>What it is</h2>
+  <ul>
+    <li><b>Permadeath with a memory.</b> Fallen heroes leave Deeds, Legacies, and grieving squadmates behind.</li>
+    <li><b>A tower that fights back.</b> Zone hazards, elite affixes, boss phases, and floors that punish a bad formation.</li>
+    <li><b>Heroes with opinions.</b> Egos, bonds, mentors, morale &mdash; a hero who resents your lineup will act on it.</li>
+    <li><b>A base worth building.</b> Forge, athenaeum, tavern, research, expeditions.</li>
+  </ul>
+
+  <h2>Optional extras</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Your own hero art</h3>
+      <p>With an NVIDIA GPU, turn on portrait generation in Settings and the game
+         downloads its own image pipeline. Every hero you roll is one nobody else
+         will ever have. Skip it and everyone shares the same art.</p>
+    </div>
+    <div class="card">
+      <h3>Written-for-you heroes</h3>
+      <p>Paste an Anthropic API key into Settings and names, backstories and
+         banter get written for your specific hero. Without one you get a large
+         pool of pre-written text and every system still works.</p>
+    </div>
+  </div>
+
+  <footer>
+    Multiplayer world server is live at this address &mdash;
+    the game connects on its own. API: <code>/status</code>
+  </footer>
+</main>
+</body>
+</html>

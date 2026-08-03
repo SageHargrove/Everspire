@@ -14,6 +14,7 @@ import json
 import bcrypt
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 
 from security import (
@@ -66,7 +67,7 @@ RL_MARKET = (20, 10 * 60)         # market listing/hiring
 RL_WRITE = (120, 60)              # general authenticated writes
 RL_RAID = (30, 10 * 60)
 
-app = FastAPI(title="Tower of Eternity — Arena Server")
+app = FastAPI(title="Everspire — Arena Server")
 
 # Order matters: body cap runs OUTERMOST so oversized requests die before
 # anything buffers them.
@@ -217,11 +218,48 @@ def _issue_token(conn, username: str) -> str:
     return token
 
 
-@app.get("/")
+LANDING_HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "landing", "index.html")
+# Where "Download" sends people. GitHub redirects /releases/latest to the newest
+# release, and to the releases index when there are none, so this never 404s
+# even before the first build is published.
+DOWNLOAD_URL = "https://github.com/SageHargrove/Everspire/releases/latest"
+
+
+@app.get("/", response_class=HTMLResponse)
+def root_landing():
+    """The public landing page. Eventually playeverspire.com points here.
+
+    Safe to serve from the API root: NOTHING in the game client requests the
+    bare root — every call is under /auth or /arena (checked before writing
+    this). The previous handler was an explicitly "human-friendly" JSON stub
+    for exactly this situation, so this replaces a placeholder rather than an
+    endpoint. The old JSON still lives at /status for uptime checks.
+
+    Serving it here rather than via Caddy is deliberate: no vhost, no second
+    TLS cert, no reverse-proxy rule that could shadow an API route, and it
+    ships through the existing redeploy_world_server.sh."""
+    try:
+        with open(LANDING_HTML, encoding="utf-8") as f:
+            return HTMLResponse(f.read())
+    except OSError:
+        # Never let a missing asset take the root down.
+        return HTMLResponse(
+            "<h1>Everspire</h1><p>Multiplayer world server is running. "
+            f'<a href="{DOWNLOAD_URL}">Download the game</a></p>')
+
+
+@app.get("/download")
+def download_redirect():
+    """One stable link for the landing page's button, so publishing a new
+    release needs no edit here and no redeploy of this server."""
+    return RedirectResponse(DOWNLOAD_URL, status_code=302)
+
+
+@app.get("/status")
 def root_status():
-    """Human-friendly landing so browsing the arena URL doesn't look broken —
-    the real API lives under /auth and /arena; the game client knows the way."""
-    return {"service": "Tower of Eternity — World Server", "status": "ok",
+    """The machine-readable root that used to live at /. Kept so uptime checks
+    and anything scripted against it keep working."""
+    return {"service": "Everspire — World Server", "status": "ok",
             "hint": "This is the multiplayer API. Launch the game to play."}
 
 

@@ -72,9 +72,13 @@ for i in $(seq 1 30); do
 done
 
 echo "── 6/6  verifying exposure + data ──"
+# The table is arena_players. This used to query a non-existent "accounts"
+# table, so it printed "(could not read)" on EVERY deploy — a permanently
+# failing data check is worse than none, because the one time it means
+# something you've been trained to ignore it.
 echo -n "    accounts preserved: "
 sudo docker exec "$NAME" python -c \
-  "import sqlite3,os;print(sqlite3.connect(os.environ['ARENA_DB_PATH']).execute('select count(*) from accounts').fetchone()[0])" \
+  "import sqlite3,os;print(sqlite3.connect(os.environ['ARENA_DB_PATH']).execute('select count(*) from arena_players').fetchone()[0], 'players')" \
   2>/dev/null || echo "(could not read)"
 echo -n "    direct :8001 from outside must FAIL: "
 if timeout 5 bash -c "</dev/tcp/$(curl -s -m 5 ifconfig.me)/8001" 2>/dev/null; then
