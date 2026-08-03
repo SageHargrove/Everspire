@@ -406,6 +406,84 @@ h1, h2, h3, .title-font {
   box-shadow: 0 2px 6px rgba(0,0,0,0.6);
 }
 
+/* ── Parallax card art ─────────────────────────────────────────────────────
+   ParallaxCard.jsx publishes --px / --py in [-1, 1] from the pointer (or
+   device tilt) and nothing else; every pixel of motion below is CSS, so it
+   runs on the compositor and never re-renders React.
+
+   Deliberately NOT clipped: .card-frame-banner ("KILLED IN ACTION") is drawn
+   at left/right: -8% on purpose, and an overflow:hidden here would slice its
+   ends off. Layer travel is capped low enough that the spill is invisible. */
+.parallax {
+  --px: 0;
+  --py: 0;
+  --tilt: 7deg;
+  perspective: 900px;
+  transform-style: preserve-3d;
+}
+
+.parallax-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transform:
+    rotateY(calc(var(--px, 0) * var(--tilt, 0deg)))
+    rotateX(calc(var(--py, 0) * var(--tilt, 0deg) * -1));
+  /* Slow, eased return when the pointer leaves; near-instant while it's
+     inside, or the card lags behind the cursor and feels like syrup. */
+  transition: transform 480ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.parallax-active .parallax-inner {
+  transition: transform 90ms linear;
+  /* Promoted only while it's actually moving. The roster shows 24 cards at
+     once and a permanent will-change on all of them is 24 compositor layers
+     of GPU memory bought for nothing. */
+  will-change: transform;
+}
+
+/* Depth is travel in px at full deflection. 3-8 is the usable band.
+   The var() fallbacks matter: ParallaxCard renders these same children with
+   no .parallax ancestor when it's disabled, and an undefined var would make
+   the whole calc invalid. */
+.parallax-layer {
+  transform: translate3d(
+    calc(var(--px, 0) * var(--depth, 4) * -1px),
+    calc(var(--py, 0) * var(--depth, 4) * -1px),
+    0
+  );
+  transition: transform 480ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.parallax-active .parallax-layer {
+  transition: transform 90ms linear;
+}
+
+/* Light sweep that tracks the pointer — the cue that sells the tilt as a
+   surface catching light rather than a picture being skewed. */
+.parallax-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 7;
+  opacity: 0;
+  transition: opacity 380ms ease;
+  background: radial-gradient(
+    circle at calc(50% + var(--px, 0) * 42%) calc(50% + var(--py, 0) * 42%),
+    rgba(255, 255, 255, 0.17),
+    rgba(255, 255, 255, 0.05) 38%,
+    rgba(255, 255, 255, 0) 62%
+  );
+}
+.parallax-active .parallax-glare { opacity: 1; }
+
+/* Belt and braces. ParallaxCard also checks this at the event level, but a
+   user who flips the setting mid-session should go flat immediately rather
+   than at the next mount. */
+@media (prefers-reduced-motion: reduce) {
+  .parallax-inner,
+  .parallax-layer { transform: none; }
+  .parallax-glare { display: none; }
+}
+
 /* Vault Selection Ring — gold, not cyan (cyan is SSS rarity's color now,
    which made every selected item read as ultra-rare). */
 .vault-item-selected {

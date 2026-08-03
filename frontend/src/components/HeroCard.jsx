@@ -3,6 +3,7 @@ import { regenerateProfile, getHeroAptitudes, getHeroRelationships } from '../ap
 import { EquipmentTypeIcon } from './EquipmentTypeIcon'
 import { classSigil } from '../classSigils'
 import GameIcon from './GameIcon'
+import ParallaxCard from './ParallaxCard'
 import Sigil from './Sigil'
 // Keep in sync with InventoryPage's ladder: common gray -> uncommon green ->
 // rare blue -> epic purple -> legendary orange -> red/cyan/magenta top end.
@@ -152,19 +153,40 @@ export function tierForStar(birthStar) {
 // that backend-composited image, not drawn here, to avoid a doubled border).
 // Reused by both the full HeroCard portrait and the lightweight post-combat
 // Team Status summary cards.
-export function CardFrame({ birthStar, status, children, style }) {
+//
+// The art tilts under the pointer (ParallaxCard). Only the framed art moves —
+// the name/stats below stay put, so the card reads as a still page with a
+// window cut into it rather than as a whole slab being skewed. That also keeps
+// clear of .hero-card:hover, which already owns a transform on the outer card.
+//
+// A dead hero doesn't tilt: the roster dims them to 40% and they aren't
+// clickable, and giving a corpse a jaunty shine is the wrong note.
+export function CardFrame({ birthStar, status, children, style, parallax = true }) {
   const tier = tierForStar(birthStar)
   return (
-    <div className={`card-frame card-frame-${tier}`} style={style}>
-      {children}
-      {status === 'injured' && <div className="card-frame-overlay card-frame-overlay-injured" />}
+    <ParallaxCard
+      className={`card-frame card-frame-${tier}`}
+      style={style}
+      disabled={!parallax || status === 'kia'}
+      maxTilt={6}
+    >
+      {/* Depth 6 on the art, 3 on the status wash: an overlay travelling
+          slightly less than what it tints keeps reading as glass over the
+          portrait rather than as part of it. */}
+      <div className="parallax-layer" style={{ '--depth': 6 }}>
+        {children}
+      </div>
+      {status === 'injured' && (
+        <div className="card-frame-overlay card-frame-overlay-injured parallax-layer"
+             style={{ '--depth': 3 }} />
+      )}
       {status === 'kia' && (
         <>
           <div className="card-frame-overlay card-frame-overlay-kia" />
           <div className="card-frame-banner">KILLED IN ACTION</div>
         </>
       )}
-    </div>
+    </ParallaxCard>
   )
 }
 

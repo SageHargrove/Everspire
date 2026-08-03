@@ -1,0 +1,206 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Everspire — parallax card demo</title>
+<style>
+:root {
+  --bg: #0b0910; --bg-card: #16121d; --bg-panel: #1c1725;
+  --border: #2e2739; --border-hi: #4a3f5c; --gold: #c9a84c;
+  --text: #d8d2e2; --text-hi: #f0ecf7; --text-dim: #8b81a3; --red: #c2453f;
+}
+body {
+  margin: 0; padding: 3rem 2rem 5rem;
+  background: radial-gradient(ellipse at top, #17121f, var(--bg));
+  color: var(--text); font-family: Georgia, serif; min-height: 100vh;
+}
+h1 { font-size: 1.35rem; letter-spacing: .16em; color: var(--gold);
+     text-transform: uppercase; margin: 0 0 .4rem; }
+p.note { color: var(--text-dim); max-width: 46rem; line-height: 1.65;
+          font-size: .92rem; margin: 0 0 2.4rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+         gap: 1.6rem; max-width: 1180px; }
+
+/* --- verbatim from the real hero card ------------------------------- */
+.hero-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1.2em; cursor: pointer;
+  transition: border-color .2s, transform .1s;
+  position: relative; display: flex; flex-direction: column;
+}
+.hero-card:hover { border-color: var(--border-hi); transform: translateY(-1px); }
+.card-frame { position: relative; border-radius: 4px; }
+.hero-portrait {
+  width: 100%; aspect-ratio: 2/3; height: auto; object-fit: cover;
+  object-position: center top; border-radius: 2px; margin-bottom: .5em;
+  display: block;
+}
+.plate {
+  position: absolute; inset: 0 0 .5em 0; border-radius: 2px;
+  background: url(plate.jpg) center/cover; opacity: .5; z-index: -1;
+}
+.hero-name { font-family: Georgia, serif; font-size: 1rem; color: var(--text-hi); }
+.hero-title { font-size: .8rem; color: var(--text-dim); font-style: italic; }
+.stars { letter-spacing: 2px; font-size: .8rem; margin-top: .35em; }
+.prismatic { color: #ff7ae0; } .gold { color: var(--gold); } .bronze { color: #b07a4a; }
+
+/* --- SLICED FROM src/index.css, unedited ---------------------------- */
+/* ── Parallax card art ─────────────────────────────────────────────────────
+   ParallaxCard.jsx publishes --px / --py in [-1, 1] from the pointer (or
+   device tilt) and nothing else; every pixel of motion below is CSS, so it
+   runs on the compositor and never re-renders React.
+
+   Deliberately NOT clipped: .card-frame-banner ("KILLED IN ACTION") is drawn
+   at left/right: -8% on purpose, and an overflow:hidden here would slice its
+   ends off. Layer travel is capped low enough that the spill is invisible. */
+.parallax {
+  --px: 0;
+  --py: 0;
+  --tilt: 7deg;
+  perspective: 900px;
+  transform-style: preserve-3d;
+}
+
+.parallax-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transform:
+    rotateY(calc(var(--px, 0) * var(--tilt, 0deg)))
+    rotateX(calc(var(--py, 0) * var(--tilt, 0deg) * -1));
+  /* Slow, eased return when the pointer leaves; near-instant while it's
+     inside, or the card lags behind the cursor and feels like syrup. */
+  transition: transform 480ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.parallax-active .parallax-inner {
+  transition: transform 90ms linear;
+  /* Promoted only while it's actually moving. The roster shows 24 cards at
+     once and a permanent will-change on all of them is 24 compositor layers
+     of GPU memory bought for nothing. */
+  will-change: transform;
+}
+
+/* Depth is travel in px at full deflection. 3-8 is the usable band.
+   The var() fallbacks matter: ParallaxCard renders these same children with
+   no .parallax ancestor when it's disabled, and an undefined var would make
+   the whole calc invalid. */
+.parallax-layer {
+  transform: translate3d(
+    calc(var(--px, 0) * var(--depth, 4) * -1px),
+    calc(var(--py, 0) * var(--depth, 4) * -1px),
+    0
+  );
+  transition: transform 480ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.parallax-active .parallax-layer {
+  transition: transform 90ms linear;
+}
+
+/* Light sweep that tracks the pointer — the cue that sells the tilt as a
+   surface catching light rather than a picture being skewed. */
+.parallax-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 7;
+  opacity: 0;
+  transition: opacity 380ms ease;
+  background: radial-gradient(
+    circle at calc(50% + var(--px, 0) * 42%) calc(50% + var(--py, 0) * 42%),
+    rgba(255, 255, 255, 0.17),
+    rgba(255, 255, 255, 0.05) 38%,
+    rgba(255, 255, 255, 0) 62%
+  );
+}
+.parallax-active .parallax-glare { opacity: 1; }
+
+/* Belt and braces. ParallaxCard also checks this at the event level, but a
+   user who flips the setting mid-session should go flat immediately rather
+   than at the next mount. */
+@media (prefers-reduced-motion: reduce) {
+  .parallax-inner,
+  .parallax-layer { transform: none; }
+  .parallax-glare { display: none; }
+}
+</style>
+
+<h1>Parallax hero cards</h1>
+<p class="note">
+  Move the pointer across a card. The framed art tilts and its layers separate;
+  the name and stars below stay flat, so the card reads as a page with a window
+  cut into it rather than a slab being skewed. Max deflection is 6&deg; and
+  layer travel is 6px &mdash; deliberately restrained. The styles below the
+  divider are sliced straight out of <code>src/index.css</code> at build time,
+  so this is the shipping effect and not an approximation. Turn on your OS
+  &ldquo;reduce motion&rdquo; setting and it all goes flat.
+</p>
+
+<div class="grid">
+  <div class="hero-card">
+    <div class="parallax card-frame" style="--tilt:6deg">
+      <div class="parallax-inner">
+        <div class="parallax-layer" style="--depth:6">
+          <div class="plate"></div>
+          <img class="hero-portrait" src="7star_soraya.png" alt="SORAYA VEX">
+        </div>
+        <div class="parallax-glare"></div>
+      </div>
+    </div>
+    <div class="hero-name">SORAYA VEX</div>
+    <div class="hero-title">Mage</div>
+    <div class="stars prismatic">★★★★★★★</div>
+  </div>
+  <div class="hero-card">
+    <div class="parallax card-frame" style="--tilt:6deg">
+      <div class="parallax-inner">
+        <div class="parallax-layer" style="--depth:6">
+          <div class="plate"></div>
+          <img class="hero-portrait" src="5star_orsino.png" alt="ORSINO KAEL">
+        </div>
+        <div class="parallax-glare"></div>
+      </div>
+    </div>
+    <div class="hero-name">ORSINO KAEL</div>
+    <div class="hero-title">Warrior</div>
+    <div class="stars gold">★★★★★☆☆</div>
+  </div>
+  <div class="hero-card">
+    <div class="parallax card-frame" style="--tilt:6deg">
+      <div class="parallax-inner">
+        <div class="parallax-layer" style="--depth:6">
+          <div class="plate"></div>
+          <img class="hero-portrait" src="2star_mira.png" alt="MIRA FENN">
+        </div>
+        <div class="parallax-glare"></div>
+      </div>
+    </div>
+    <div class="hero-name">MIRA FENN</div>
+    <div class="hero-title">Scout</div>
+    <div class="stars bronze">★★☆☆☆☆☆</div>
+  </div>
+</div>
+
+<script>
+// A trimmed copy of ParallaxCard.jsx's effect — same two variables, same
+// rAF batching, same cached rect. No framework, so the page opens from disk.
+document.querySelectorAll('.parallax').forEach(el => {
+  let raf = 0, px = 0, py = 0, rect = null
+  const flush = () => {
+    raf = 0
+    el.style.setProperty('--px', px.toFixed(4))
+    el.style.setProperty('--py', py.toFixed(4))
+  }
+  const set = (x, y) => { px = x; py = y; if (!raf) raf = requestAnimationFrame(flush) }
+  el.addEventListener('pointerenter', e => {
+    if (e.pointerType !== 'mouse') return
+    rect = el.getBoundingClientRect()
+    el.classList.add('parallax-active')
+  })
+  el.addEventListener('pointermove', e => {
+    if (!rect || e.pointerType !== 'mouse') return
+    set(Math.max(-1, Math.min(1, ((e.clientX - rect.left) / rect.width) * 2 - 1)),
+        Math.max(-1, Math.min(1, ((e.clientY - rect.top) / rect.height) * 2 - 1)))
+  })
+  el.addEventListener('pointerleave', () => {
+    el.classList.remove('parallax-active'); rect = null; set(0, 0)
+  })
+})
+</script>
