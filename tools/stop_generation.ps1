@@ -18,15 +18,32 @@ $patterns = 'build_base_pool|regen_monsters|regen_zone_floors|gen_equipment_samp
 
 function Get-GenProcs {
     Get-CimInstance Win32_Process |
+        # Only real generators. Restricting by process NAME first matters:
+        # matching on command line alone also hits any powershell/cmd whose
+        # arguments merely MENTION these tools — a monitor running a duplicate
+        # check, or this script itself — which produced phantom "still alive"
+        # warnings and made a clean stop look failed.
+        Where-Object { $_.Name -in @('python.exe', 'pythonw.exe', 'bash.exe') } |
         Where-Object { $_.CommandLine -and $_.CommandLine -match $patterns } |
-        # Never match this script's own PowerShell host — its command line
-        # contains the pattern string, so an unfiltered kill suicides and
-        # reports a false failure.
         Where-Object { $_.ProcessId -ne $PID }
 }
 
+# ORDER IS LOAD-BEARING: the queue SHELL dies first.
+#
+# run_art_queue.sh runs its stages in sequence, so killing only the current
+# child hands control back to the shell, which immediately starts the next
+# stage — and that stage relaunches ComfyUI. Killing children in a loop looks
+# like processes "respawning with new PIDs" and never converges. Kill the
+# parent, then the children.
+$shells = @(Get-GenProcs | Where-Object { $_.Name -eq 'bash.exe' })
+foreach ($p in $shells) {
+    Write-Output ("  killing queue shell {0}" -f $p.ProcessId)
+    Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
+}
+if ($shells.Count -gt 0) { Start-Sleep -Seconds 3 }
+
 $found = @(Get-GenProcs)
-if ($found.Count -eq 0) {
+if ($found.Count -eq 0 -and $shells.Count -eq 0) {
     Write-Output "nothing generating"
 } else {
     foreach ($p in $found) {

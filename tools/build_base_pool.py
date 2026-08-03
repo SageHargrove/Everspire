@@ -70,12 +70,22 @@ HERO_LORA_NEW = "Everspire_Heroes_v1.safetensors:0.75,AddMicroDetails_NoobAI_v5.
 # So there is exactly one useful jump. Star 4 is where it lands, because that
 # is the top of the pool ladder — promotions to 2 and 3 fall through to card-
 # frame escalation, and 4 is a real visible re-equip.
-POOL_LADDER_STARS = [4]
-# 0.72, not 0.76. Measured on a fixed archer: at 0.72 a silver cuirass and
-# pauldrons appeared while her face and the red streak in her hair survived
-# intact. 0.76 plus weighted identity clauses drifted faces, skin tone,
-# tattoos and eyepatches — both changes pushed the same wrong way.
-POOL_DENOISE = {4: 0.72}
+# 1 / 4 / 7. Three states, not six: below ~0.66 denoise nothing visibly
+# changes, so consecutive stars cannot each show a step. 7 earns its rung
+# because it is NOT summonable — the pull ceiling is 6 — so it is purely a
+# promotion payoff, and without pool art a non-GPU player could never see it.
+POOL_LADDER_STARS = [4, 7]
+# 0.72 at 4, measured: a silver cuirass and pauldrons appear while the face and
+# a red hair streak survive intact. 0.76 plus weighted identity clauses drifted
+# faces, skin and tattoos — both changes pushed the same wrong way.
+#
+# 7 goes slightly higher because it is the climax and needs the bigger visual
+# break, but stays under 0.82, where identity measurably shatters (a
+# red-streaked brunette came back purple-haired). Most of 7's extra punch comes
+# from language rather than denoise now: _tier_flavor(7) adds "godlike
+# legendary being, elaborate ornate armor, dramatic glowing aura" and was never
+# being applied until it was fixed this session.
+POOL_DENOISE = {4: 0.72, 7: 0.78}
 
 # The base render is where anatomy defects originate, and low-denoise rungs
 # inherit them. NEGATIVE_STYLE already carries "extra limb"/"bad anatomy"

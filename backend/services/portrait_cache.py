@@ -1710,26 +1710,44 @@ UPGRADE_TAGS = {
 # renders at 0.6 held identity perfectly and escalated nothing, because every
 # step re-anchors to its own reference and converges. Anchoring every star back
 # to the original and scaling the denoise is what actually produces a ladder.
-UPGRADE_DENOISE_BY_STAR = {2: 0.50, 3: 0.56, 4: 0.62, 5: 0.68, 6: 0.72, 7: 0.76}
-UPGRADE_DENOISE = 0.62          # fallback for an unexpected star
+# MILESTONES ONLY — art is re-rendered at 4 and 7, never at 2/3/5/6.
+#
+# Per-star escalation was tried and does not work. The old ladder ran
+# {2:0.50, 3:0.56, 4:0.62, 5:0.68, 6:0.72, 7:0.76}, and everything below ~0.66
+# is visually indistinguishable from the source — so four of those six ranks
+# cost a player a full ~25s generation to see essentially nothing change.
+# Worse on their machine than ours, because they wait for it.
+#
+# The other four ranks escalate the card frame instead, which is honest: the
+# promotion is visibly frame-only rather than a render that quietly did nothing.
+# Matches the shipped pool exactly, so GPU and non-GPU players get the same
+# progression shape.
+UPGRADE_DENOISE_BY_STAR = {4: 0.72, 7: 0.78}
+UPGRADE_STARS = tuple(UPGRADE_DENOISE_BY_STAR)
+UPGRADE_DENOISE = 0.72          # fallback for an unexpected star
 
 
 _POOL_LADDER_RE = re.compile(r"^(ev_\d+_[A-Za-z]+_[mf])(\d)\.png$")
-# Highest star the shipped pool renders a ladder for. Above this, non-GPU
-# players get card-frame escalation instead of new art — they rarely reach 5+,
-# and rendering 3 more stars for every pool character trebles the ship size for
-# the least-seen ranks.
-POOL_LADDER_MAX_STAR = 4
+# The stars the shipped pool actually renders art for. Everything else
+# escalates the card frame instead.
+#
+# Three states rather than seven because per-star art escalation is not
+# achievable: img2img below ~0.66 denoise produces no visible change, and
+# anything high enough to re-equip a character also starts redrawing them.
+# Measured repeatedly — see UPGRADE_DENOISE_BY_STAR.
+POOL_LADDER_STARS = (4, 7)
+POOL_LADDER_MAX_STAR = max(POOL_LADDER_STARS)
 
 
 def _pool_ladder_variant(current_path: str, new_star: int) -> str | None:
     """The SAME pool character's portrait at a higher star, or None.
 
     This is how a player with no GPU still sees their hero grow: the shipped
-    pool renders each character at stars 1-4 as one escalating person, so a
-    promotion is a file swap rather than a render. Returns None for a
-    generated (non-pool) portrait or a star past the ladder."""
-    if not current_path or new_star > POOL_LADDER_MAX_STAR:
+    pool renders each character at stars 1, 4 and 7 as one escalating person,
+    so those promotions are a file swap rather than a render. Returns None for
+    a generated (non-pool) portrait or a star with no rung, which the caller
+    treats as frame-only."""
+    if not current_path or new_star not in POOL_LADDER_STARS:
         return None
     m = _POOL_LADDER_RE.match(os.path.basename(current_path))
     if not m:
@@ -1749,6 +1767,13 @@ def queue_upgrade_portrait(hero_id: int, new_star: int):
 
     Urgent — the player is looking at the promotion result right now."""
     def _job():
+        # Not a milestone for EITHER path? The card frame carries this rank.
+        # Bail before touching the GPU — a re-render at these steps is
+        # imperceptible and the player would wait ~25s for it. Checking both
+        # ladders rather than just the render one, so a future divergence
+        # can't silently disable the pool swap for non-GPU players.
+        if new_star not in UPGRADE_DENOISE_BY_STAR and new_star not in POOL_LADDER_STARS:
+            return
         with db() as conn:
             hero = conn.execute(
                 "SELECT name, hero_class, gender, portrait_prompt, portrait_path, portrait_origin "
