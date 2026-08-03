@@ -1933,7 +1933,16 @@ def _generate_enemy_portrait(enemy_name: str, hint: str, tier_dir: str = "normal
                 f"menacing pose, dramatic lighting, {MONSTER_STYLE}"
             )
             negative = MONSTER_NEGATIVE
-        success = generate_portrait_comfy(prompt, path, negative=negative, lora_override=MONSTER_LORA)
+        # FaceDetailer only for person-shaped enemies. It is a face-detect plus
+        # inpaint pass — ~20 extra sampler steps — and on a spider, a dragon or
+        # an ooze it is not merely wasted: when it does latch onto something it
+        # inpaints a HUMAN face onto a creature that shouldn't have one. The
+        # humanoid split already exists for the style, so it costs nothing to
+        # reuse it here.
+        success = generate_portrait_comfy(
+            prompt, path, negative=negative, lora_override=MONSTER_LORA,
+            face_detail=(enemy_name in HUMANOID_ENEMY_NAMES),
+        )
         if success:
             print(f"[Cache] Generated enemy portrait: {enemy_name} -> {path}")
         else:

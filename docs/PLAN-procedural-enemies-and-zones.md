@@ -156,6 +156,65 @@ loading screen.
 
 ---
 
+## Prioritisation — what generates first, and at what quality
+
+One GPU, serialised. So the question isn't "how do we generate everything",
+it's "what does the player actually look at". Rank by
+**screen time × display size × attachment**:
+
+| # | what | quality | why |
+|---|---|---|---|
+| 1 | **star-up re-render** | full: hires + FaceDetailer | the player is staring at the promotion result *right now* |
+| 2 | **hero portraits (owned)** | full: hires + FaceDetailer | constant screen time, large, the thing they get attached to |
+| 3 | **next zone's enemies** | no hires; FaceDetailer only if humanoid | seen mid-combat at moderate size, and transient |
+| 4 | **facility art (built only)** | hires, no FaceDetailer | large but visited rarely; no faces in a room |
+| 5 | **equipment icons (owned, rare+)** | no hires, no FaceDetailer | rendered at icon size — hires is invisible here |
+| 6 | **floor plates** | never per-player | draw from the shared library instead |
+
+Two rules that fall out of it:
+
+- **Generate on acquisition, not on possibility.** Never pre-render art for
+  equipment a player might one day loot, or for a facility they haven't built.
+  The combinatorics are unbounded and the hit rate is terrible.
+- **Never block gameplay on the GPU.** Every tier above has a shipped fallback.
+  A player who out-climbs their art sees stock monsters with custom stats and
+  names, which is fine. A loading screen is not.
+
+## Making it faster without making it worse
+
+The cost is sampler steps, weighted by the pixels each pass runs over:
+
+| pass | steps | resolution | relative cost |
+|---|---|---|---|
+| base | 28 | 832×1216 | 28 |
+| hires | 20 | 1248×1824 | ~46 — **the expensive one** |
+| FaceDetailer | 20 | small face crop | ~5 |
+
+So a full hero is ~79 units and an enemy with hires and FaceDetailer stripped
+is ~28 — roughly **2.8× the throughput** for art nobody inspects at full size.
+
+Already applied: FaceDetailer is off for the 68 non-humanoid enemies (of 127).
+That pass is a face-detect plus inpaint; on a spider or a dragon it is not just
+wasted work, it occasionally inpaints a human face onto something that should
+not have one.
+
+Levers deliberately NOT pulled:
+
+- **Fewer base steps (28 → 22).** Maybe 20% off, but it degrades exactly the
+  thing the LoRAs were trained to do. Not worth it for hero art.
+- **Turbo/Lightning LoRAs (4-8 steps).** Enormous speedup and it would fight
+  the trained adapters for control of the style. The whole point of training
+  them was to own the look.
+- **TensorRT / torch.compile.** Real 30-50% gains, but it's fragile and adds a
+  compile step to every friend's install. Revisit only if the GPU becomes the
+  actual complaint.
+
+**The biggest lever isn't speed, it's not confusing "unique" with
+"generated".** A shared library that each player draws a different subset from
+is perceptually unique at zero marginal cost — which is exactly what the 40
+floor plates buy. Spend real generation where attachment actually lives:
+heroes first, then the enemies that make a player's tower feel like theirs.
+
 ## Deliberately out of scope
 
 - **LLM-authored abilities.** The seven are hand-tuned against the combat
