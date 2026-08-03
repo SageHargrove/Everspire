@@ -59,6 +59,11 @@ def get_status() -> dict:
     with _LOCK:
         s = dict(_STATUS)
     s["installed"] = is_installed()
+    # Reported separately from "installed" on purpose: generation can work
+    # perfectly while the cutout is missing, and that combination shows up as
+    # hero art with ragged backgrounds rather than as an error. Surfacing it
+    # lets Settings offer a repair instead of the player wondering.
+    s["cutout_ready"] = cutout_ready() if s["installed"] else False
     s["percent"] = round(100 * s["downloaded"] / s["total"], 1) if s["total"] else None
     return s
 
@@ -68,13 +73,30 @@ def _set(**kw):
         _STATUS.update(kw)
 
 
+def _active_comfy() -> tuple[str, str]:
+    """(dir, python) of the ComfyUI the GAME will actually use.
+
+    Falls back to this installer's own layout. Resolving properly matters:
+    checking only COMFY_DIR told anyone who already had a ComfyUI — with the
+    right checkpoint sitting in it — that they needed another 9GB download."""
+    try:
+        from services.comfy_service import comfy_paths
+        d, py = comfy_paths()
+        if d and py:
+            return d, py
+    except Exception:
+        pass
+    return COMFY_DIR, EMBEDDED_PY
+
+
 def is_installed() -> bool:
     """A usable install = ComfyUI, a Python to run it, and the checkpoint.
     Deliberately checks the checkpoint too: ComfyUI without a model starts
     fine and then fails every generation, which reads as a game bug."""
-    return (os.path.isfile(os.path.join(COMFY_DIR, "main.py"))
-            and os.path.isfile(EMBEDDED_PY)
-            and os.path.isfile(os.path.join(COMFY_DIR, "models", "checkpoints", CHECKPOINT_NAME)))
+    comfy_dir, py = _active_comfy()
+    return (os.path.isfile(os.path.join(comfy_dir, "main.py"))
+            and os.path.isfile(py)
+            and os.path.isfile(os.path.join(comfy_dir, "models", "checkpoints", CHECKPOINT_NAME)))
 
 
 def has_nvidia_gpu() -> bool:
@@ -144,8 +166,20 @@ def _install():
 
         os.makedirs(GEN_DIR, exist_ok=True)
 
+        # Decide the target ONCE. A player who already has a working ComfyUI
+        # (or Liam's dev box at ~/ComfyUI) gets the models and the node added
+        # to it, rather than a second 1.5GB copy sitting next to the one the
+        # game will actually launch. Everything below writes to target_dir.
+        found_dir, found_py = _active_comfy()
+        reuse = (os.path.isfile(os.path.join(found_dir, "main.py"))
+                 and os.path.isfile(found_py))
+        target_dir = found_dir if reuse else COMFY_DIR
+
         # 1. ComfyUI portable
-        if not os.path.isfile(os.path.join(COMFY_DIR, "main.py")):
+        if reuse:
+            _set(state="running", step_index=2,
+                 step=f"Using the ComfyUI already at {target_dir}")
+        elif not os.path.isfile(os.path.join(COMFY_DIR, "main.py")):
             _set(state="running", step_index=1, step="Downloading ComfyUI (~1.5GB)")
             archive = os.path.join(GEN_DIR, "ComfyUI_windows_portable_nvidia.7z")
             _download(COMFY_7Z_URL, archive, "Downloading ComfyUI (~1.5GB)")
@@ -167,36 +201,130 @@ def _install():
         # 2. checkpoint
         _set(step_index=3, step="Downloading the art model (~7GB)", downloaded=0, total=0)
         _download(CHECKPOINT_URL,
-                  os.path.join(COMFY_DIR, "models", "checkpoints", CHECKPOINT_NAME),
+                  os.path.join(target_dir, "models", "checkpoints", CHECKPOINT_NAME),
                   "Downloading the art model (~7GB)")
 
         # 3. style LoRAs
         _set(step_index=4, step="Downloading Everspire style models (~450MB)",
              downloaded=0, total=0)
         for url, name in LORAS:
-            _download(url, os.path.join(COMFY_DIR, "models", "loras", name),
+            _download(url, os.path.join(target_dir, "models", "loras", name),
                       f"Downloading {name}")
 
-        # 4. cutout node + its deps, into the PORTABLE python (not the game's —
-        #    the game has no torch and never runs the node).
-        _set(step_index=5, step="Installing the cutout node", downloaded=0, total=0)
-        node_src = os.path.join(_repo_root(), "generation", "comfy_nodes", "toe_rembg", "__init__.py")
-        if os.path.isfile(node_src):
-            node_dst_dir = os.path.join(COMFY_DIR, "custom_nodes", "toe_rembg")
-            os.makedirs(node_dst_dir, exist_ok=True)
-            shutil.copy2(node_src, os.path.join(node_dst_dir, "__init__.py"))
-        if os.path.isfile(EMBEDDED_PY):
-            # Best-effort: a failure here costs cutout quality, not the install.
-            _run([EMBEDDED_PY, "-m", "pip", "install", "rembg", "onnxruntime"], timeout=1800)
+        # 4. the cutout — node, deps, and the segmentation weights.
+        _set(step_index=5, step="Installing the cutout (~200MB)", downloaded=0, total=0)
+        cutout_err = _install_cutout(target_dir)
 
         # 5. remember where it went, so comfy_service can find it without an
         #    env var and without the player restarting anything.
-        _remember_comfy_dir(COMFY_DIR)
+        _remember_comfy_dir(target_dir)
 
-        _set(state="done", step="", message="Hero generation is ready.")
+        if cutout_err:
+            # Generation works; transparency will be worse. Say so plainly
+            # instead of reporting a clean "done" and letting the player
+            # discover it as ragged hero art.
+            _set(state="done", step="", message=(
+                "Hero generation is ready, but the cutout step did not finish "
+                f"({cutout_err}). Portraits will still generate; their "
+                "backgrounds may be rougher. Re-run the install to retry."))
+        else:
+            _set(state="done", step="", message="Hero generation is ready.")
     except Exception as e:
         _set(state="error", message=f"{type(e).__name__}: {e}",
              step="")
+
+
+SEG_MODEL_FILE = "isnet-anime.onnx"
+
+
+def _u2net_home() -> str:
+    """Where rembg caches its ONNX weights."""
+    return os.getenv("U2NET_HOME") or os.path.join(os.path.expanduser("~"), ".u2net")
+
+
+def cutout_ready() -> bool:
+    """True when the good transparent cutout is actually available.
+
+    Reports on the ComfyUI the GAME will use, not on this installer's fixed
+    path — a dev box (or a player who already had ComfyUI) runs from
+    ~/ComfyUI, and checking only the installer layout called a perfectly
+    working setup broken.
+
+    All three pieces have to be there: the node (so ComfyUI cuts during
+    generation), rembg in that python (which portrait_cache also borrows as a
+    fallback), and the segmentation weights."""
+    comfy_dir, py = _active_comfy()
+    node = os.path.join(comfy_dir, "custom_nodes", "toe_rembg")
+    if not (os.path.isfile(os.path.join(node, "__init__.py"))
+            and os.path.isfile(os.path.join(node, "cutout.py"))):
+        return False
+    if not os.path.isfile(os.path.join(_u2net_home(), SEG_MODEL_FILE)):
+        return False
+    if not os.path.isfile(py):
+        return False
+    return _run([py, "-c", "import rembg, onnxruntime"], timeout=300).returncode == 0
+
+
+def _install_cutout(comfy_dir: str | None = None) -> str | None:
+    """Node + rembg + weights, into ComfyUI's python (never the game's — the
+    game has no torch and never runs the node). Returns None on success or a
+    short reason on failure.
+
+    This used to be one best-effort pip call whose result was never checked, so
+    a failed install reported "Hero generation is ready" and the player found
+    out via ragged hero art. Every piece is verified now.
+
+    The weights matter more than they look. rembg fetches isnet-anime.onnx
+    (~176MB) from GitHub lazily, on the FIRST cutout — so without this step a
+    player's first hero triggers a silent download that can fail on a flaky
+    network, and the cutout quietly degrades to the flood that hollows out dark
+    costumes. Pull it during the install, where a failure is visible and
+    retryable, not mid-game."""
+    if comfy_dir is None:
+        comfy_dir, py = _active_comfy()
+    else:
+        py = os.path.join(comfy_dir, "venv", "Scripts", "python.exe")
+        if not os.path.isfile(py):
+            py = os.path.join(os.path.dirname(comfy_dir), "python_embeded", "python.exe")
+
+    node_src = os.path.join(_repo_root(), "generation", "comfy_nodes", "toe_rembg")
+    if not os.path.isdir(node_src):
+        return "cutout node missing from the install"
+    # The WHOLE directory: __init__.py is a thin wrapper that imports cutout.py
+    # beside it. Copying only __init__.py leaves a node that raises on import,
+    # which ComfyUI then reports as "node not found".
+    try:
+        shutil.copytree(node_src, os.path.join(comfy_dir, "custom_nodes", "toe_rembg"),
+                        dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__"))
+    except Exception as e:
+        return f"could not copy the cutout node: {e}"
+
+    if not os.path.isfile(py):
+        return "ComfyUI's python is missing"
+
+    _set(step="Installing the cutout (1/2: dependencies)")
+    for attempt in (1, 2):
+        if _run([py, "-c", "import rembg, onnxruntime"], timeout=300).returncode == 0:
+            break
+        res = _run([py, "-m", "pip", "install", "rembg", "onnxruntime"], timeout=2400)
+        if res.returncode != 0 and attempt == 2:
+            return f"pip install rembg failed: {res.stderr[-200:].decode(errors='replace')}"
+    else:
+        return "rembg did not import after installing"
+
+    _set(step="Installing the cutout (2/2: segmentation model, ~176MB)")
+    if not os.path.isfile(os.path.join(_u2net_home(), SEG_MODEL_FILE)):
+        # Ask rembg to fetch its own weights — it knows the URL and checksum,
+        # so this stays correct if the model is ever swapped.
+        res = _run([py, "-c",
+                    "from rembg.sessions.dis_anime import DisSession as S; S.download_models()"],
+                   timeout=2400)
+        if res.returncode != 0 or not os.path.isfile(os.path.join(_u2net_home(), SEG_MODEL_FILE)):
+            return "could not download the segmentation model"
+
+    if not cutout_ready():
+        return "cutout verification failed"
+    return None
 
 
 def _repo_root() -> str:

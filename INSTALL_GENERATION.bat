@@ -42,10 +42,29 @@ echo [3/5] Downloading the Everspire style models (~450MB)...
 curl -L -C - -o "%COMFY%\models\loras\ToE_Heroes_Main.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/ToE_Heroes_Main.safetensors" || goto fail
 curl -L -C - -o "%COMFY%\models\loras\AddMicroDetails_NoobAI_v5.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/AddMicroDetails_NoobAI_v5.safetensors" || goto fail
 
-echo [4/5] Installing the content-aware cutout node (transparent hero art)...
+echo [4/5] Installing the content-aware cutout (transparent hero art, ~200MB)...
+rem The WHOLE folder: __init__.py is a thin wrapper that imports cutout.py
+rem beside it. Copying only __init__.py leaves a node that raises on import,
+rem which ComfyUI then reports as "node not found".
 if not exist "%COMFY%\custom_nodes\toe_rembg" mkdir "%COMFY%\custom_nodes\toe_rembg"
-copy /Y "%~dp0generation\comfy_nodes\toe_rembg\__init__.py" "%COMFY%\custom_nodes\toe_rembg\__init__.py" >nul
-"%PORTABLE%\python_embeded\python.exe" -m pip install rembg onnxruntime >nul 2>&1
+copy /Y "%~dp0generation\comfy_nodes\toe_rembg\*.py" "%COMFY%\custom_nodes\toe_rembg\" >nul
+"%PORTABLE%\python_embeded\python.exe" -m pip install rembg onnxruntime
+if errorlevel 1 goto cutoutfail
+rem Pull the segmentation weights NOW. rembg fetches isnet-anime.onnx (~176MB)
+rem lazily on the first cutout, so skipping this turns a player's first hero
+rem into a silent download that can fail — and the cutout quietly degrades.
+echo     Downloading the segmentation model (~176MB)...
+"%PORTABLE%\python_embeded\python.exe" -c "from rembg.sessions.dis_anime import DisSession as S; S.download_models()"
+if errorlevel 1 goto cutoutfail
+"%PORTABLE%\python_embeded\python.exe" -c "import rembg, onnxruntime"
+if errorlevel 1 goto cutoutfail
+goto cutoutok
+:cutoutfail
+echo.
+echo   !! The cutout step did not finish. Portraits will still generate, but
+echo      their backgrounds will be rougher. Re-run this script to retry.
+echo.
+:cutoutok
 
 echo [5/5] Registering with the game...
 setx COMFYUI_DIR "%COMFY%" >nul

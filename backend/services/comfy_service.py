@@ -486,16 +486,12 @@ def is_comfy_running() -> bool:
         return False
 
 
-def ensure_comfy_running() -> bool:
-    """Launch-everything UX: if ComfyUI isn't up but a local install exists,
-    start it in the background so the player never has to. Looks at
-    COMFYUI_DIR, then ~/ComfyUI. Non-fatal on every path — no install just
-    means base-art mode. Returns True if the server is (or soon will be) up."""
-    if is_comfy_running():
-        return True
-    if not COMFY_URL.startswith(("http://127.0.0.1", "http://localhost")):
-        return False  # remote server — nothing to launch locally
-    import subprocess, sys
+def comfy_paths() -> tuple[str | None, str | None]:
+    """(comfy_dir, python_exe) for the local ComfyUI install, or (None, None).
+
+    Shared by auto-start and by portrait_cache's cutout fallback — that python
+    is the only interpreter on a player's machine with rembg in it, so it is
+    worth finding from more than one place."""
     home = os.path.expanduser("~")
 
     # Where the in-game installer put it, if it ran. Checked FIRST and read
@@ -520,14 +516,31 @@ def ensure_comfy_running() -> bool:
     ) if c]
     cand = next((c for c in cands if os.path.exists(os.path.join(c, "main.py"))), None)
     if not cand:
-        return False
-    # python: dev venv inside the dir, or the portable build's embedded
-    # python one level up (ComfyUI_windows_portable/python_embeded/) —
-    # NEVER sys.executable (the game venv has no torch).
+        return None, None
+    # python: dev venv inside the dir, or the portable build's embedded python
+    # one level up (ComfyUI_windows_portable/python_embeded/) — NEVER
+    # sys.executable (the game venv has no torch and no rembg).
     py = os.path.join(cand, "venv", "Scripts", "python.exe")
     if not os.path.exists(py):
         py = os.path.join(os.path.dirname(cand), "python_embeded", "python.exe")
-    if not os.path.exists(py):
+    return (cand, py) if os.path.exists(py) else (cand, None)
+
+
+def ensure_comfy_running() -> bool:
+    """Launch-everything UX: if ComfyUI isn't up but a local install exists,
+    start it in the background so the player never has to. Non-fatal on every
+    path — no install just means base-art mode. Returns True if the server is
+    (or soon will be) up."""
+    if is_comfy_running():
+        return True
+    if not COMFY_URL.startswith(("http://127.0.0.1", "http://localhost")):
+        return False  # remote server — nothing to launch locally
+    import subprocess, sys
+
+    cand, py = comfy_paths()
+    if not cand:
+        return False
+    if not py:
         print(f"[ComfyUI] Found {cand} but no runnable python — skipping auto-start.")
         return False
     try:

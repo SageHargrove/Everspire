@@ -88,13 +88,16 @@ OPTIONAL — YOUR OWN UNIQUE HERO ART (needs an NVIDIA GPU)
 Out of the box everyone shares the same art. If you have an NVIDIA card and
 ~12GB of free disk, you can generate heroes nobody else will ever have.
 
-  1. Run INSTALL_GENERATION.bat once (downloads ~9GB, resume-safe — just
-     rerun it if it gets interrupted).
-  2. Start the game, go to Settings -> AI, and switch ON
-     "Hero Portrait Generation".
+Go to Settings -> AI and switch ON "Hero Portrait Generation". The game
+downloads everything it needs (~9.2GB) by itself — you don't have to install
+anything. It's resume-safe, so closing the laptop mid-download is fine; it
+picks up where it stopped.
 
-The generator starts and stops with the game from then on. No NVIDIA GPU?
-Skip this entirely — nothing else changes.
+The generator then starts and stops with the game. No NVIDIA GPU? Skip this
+entirely — nothing else changes, and none of that 9.2GB is downloaded.
+
+(INSTALL_GENERATION.bat does the same thing from outside the game, if you'd
+rather run it yourself. You don't need both.)
 
 
 UPDATING TO A NEWER BUILD
@@ -112,6 +115,9 @@ Window opens blank/white    Give it a moment on first launch. If it persists,
                             close it and reopen.
 Nothing happens at all      Another copy may already be running — check the
                             taskbar, and Task Manager for Everspire.exe.
+Generated heroes have       The cutout step didn't finish installing. Settings
+ragged/blocky backgrounds   -> AI will say so; turn "Hero Portrait Generation"
+                            off and on again to retry just that part.
 
 Found a bug? Tell Liam what you were doing when it happened. Heroes dying is
 not a bug, it is the entire point.

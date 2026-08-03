@@ -3,6 +3,15 @@ backend/saves/
 backend/__pycache__/
 backend/**/__pycache__/
 backend/*.pyc
+
+# Local world-server state. arena_server/Dockerfile does `COPY arena_server /app`,
+# which would otherwise bake a dev arena.db (real accounts, real ELO) and local
+# save snapshots into a public image. The live DB lives in the world_data volume
+# at /app/data and is unaffected by this.
+arena_server/arena.db
+arena_server/arena.db-*
+arena_server/saves/
+arena_server/__pycache__/
 frontend/node_modules/
 frontend/dist/
 **/*.pyc

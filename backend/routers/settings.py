@@ -83,7 +83,8 @@ def set_apikey(payload: dict = Body(...)):
 def get_image_generation_enabled() -> bool:
     """Whether local ComfyUI portrait generation runs on this machine.
     Defaults OFF — fresh installs use the bundled art pool until the player
-    opts in (needs a local NVIDIA GPU + ComfyUI, see INSTALL_GENERATION.bat)."""
+    opts in. Turning it on downloads everything needed (~9.2GB, NVIDIA only)
+    via generation_installer; nobody has to run a script."""
     return bool(_load().get("image_generation_enabled", False))
 
 
@@ -105,8 +106,13 @@ def set_generation(payload: dict = Body(...)):
     needs_install = False
     if enabled:
         try:
-            from services.generation_installer import is_installed
-            needs_install = not is_installed()
+            from services.generation_installer import is_installed, cutout_ready
+            # cutout_ready matters as much as is_installed: generation works
+            # without it, but hero art comes out with ragged backgrounds, which
+            # reads as bad art rather than as a missing download. Every step of
+            # _install() skips what's already on disk, so re-running to fix
+            # only the cutout costs a few minutes, not another 9GB.
+            needs_install = not is_installed() or not cutout_ready()
         except Exception:
             pass
         if not needs_install:

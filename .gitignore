@@ -27,8 +27,8 @@ ComfyUI/
 *.mp3
 
 # PyInstaller build artifacts (the packaged .exe is large/binary and fully
-# regenerable from app_launcher.py + InfiniteGacha.spec — rebuild locally
-# with `pyinstaller InfiniteGacha.spec` instead of committing it;
+# regenerable from app_launcher.py + Everspire.spec — rebuild locally
+# with `pyinstaller Everspire.spec` instead of committing it;
 # frontend/dist/ stays tracked since the packaged exe needs it present)
 /build/
 /dist/
@@ -52,3 +52,22 @@ arena_server/saves/
 # Never commit these — a public repo shouldn't hand out recon for the VM.
 deploy/*.local.md
 deploy/*.local.env
+
+# Build output. `python tools/make_release.py` stages the whole shippable game
+# here (~3GB) and zips it. Regenerable, never committed — and a stale copy is
+# worse than none, since it contains a full second copy of backend/ that can be
+# mistaken for source.
+release/
+build/
+dist/
+
+# One-time originals kept by tools/recut_hero_cutouts.py so a bad re-cut can be
+# rolled back. Local safety net, not art.
+*.prev.bak
+
+# Stray root-level save DB. backend/saves/ was already ignored but this one
+# wasn't, so a personal save was one `git add -A` from being committed.
+/saves/
+
+# Regenerable review artifact (tools/recut_hero_cutouts.py writes it).
+docs/cutout-repair.png

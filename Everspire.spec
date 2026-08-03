@@ -52,13 +52,19 @@ hiddenimports = [
     'sqlite3', 'email.mime.text',
 ]
 
-# rembg/onnxruntime are intentionally NOT bundled. Cutouts run inside the
-# player's ComfyUI (the toe_rembg custom node INSTALL_GENERATION.bat installs),
-# and on the backend side the PRIMARY cutout is the dependency-free border
-# flood — rembg is only the last-ditch path for a non-void backdrop, and
-# portrait_cache now treats it as a soft failure when absent. Bundling
-# onnxruntime would add ~200MB to every download for a path most players
-# never reach.
+# rembg/onnxruntime are intentionally NOT bundled — ~200MB on every download
+# for a path most players never reach. Cutouts run inside the player's ComfyUI,
+# which has its own python and gets rembg from the installer; the toe_rembg
+# custom node there runs the canonical algorithm
+# (generation/comfy_nodes/toe_rembg/cutout.py) and the portrait arrives already
+# transparent, so the backend does nothing.
+#
+# When that node is missing, the backend ladder takes over WITHOUT rembg:
+# make_game_cutout (numpy + scipy, both bundled above) then the dependency-free
+# border flood. Both are a step down — the flood in particular hollows out dark
+# costumes and must never be the primary path again (see cutout.py). Bundling
+# rembg would let the backend run the good algorithm itself; it is not worth
+# 200MB while the node covers the normal case.
 excludes = [
     'rembg', 'onnxruntime', 'torch', 'torchvision', 'transformers',
     'matplotlib', 'pandas', 'tkinter', 'pytest',

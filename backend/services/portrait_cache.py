@@ -945,9 +945,23 @@ def _void_bg_mask(rgb, dark_thresh=26):
     border = np.unique(np.concatenate([lbl[0, :], lbl[-1, :], lbl[:, 0], lbl[:, -1]]))
     border = border[border != 0]
     bg = np.isin(lbl, border)
-    # leak-cut: erode then re-grow within bg — thin leak corridors die
-    seed = ndimage.binary_erosion(bg, iterations=3)
-    bg = ndimage.binary_propagation(seed, mask=bg)
+    # Leak-cut: erode, drop whatever no longer reaches the frame edge, then
+    # re-grow by the SAME radius. A corridor thinner than 2x the radius is
+    # severed and the pocket behind it stays foreground.
+    #
+    # This used to erode and then binary_propagation(seed, mask=bg), which was
+    # a no-op: propagation fills every component of the mask that contains any
+    # seed, so it flowed straight back through the corridor it had just cut and
+    # returned the original mask. Fixed 2026-08-02. Bounded dilation is the
+    # whole point — it cannot cross the gap.
+    ITER = 3
+    seed = ndimage.binary_erosion(bg, iterations=ITER)
+    slbl, _ = ndimage.label(seed)
+    touch = np.unique(np.concatenate([slbl[0, :], slbl[-1, :], slbl[:, 0], slbl[:, -1]]))
+    touch = touch[touch != 0]
+    if touch.size:
+        seed = np.isin(slbl, touch)
+        bg = ndimage.binary_dilation(seed, iterations=ITER) & bg
     # despeckle foreground: dust specks in the void become transparent
     fg = ~bg
     flbl, n = ndimage.label(fg)
@@ -1021,25 +1035,133 @@ def _find_master(cutout_path: str) -> str | None:
     return None
 
 
+def _border_is_void(im, probe_max: int = 24) -> bool:
+    """True when the frame edge is a genuine near-black void, i.e. this really
+    is one of the pipeline's black-bg masters and connectivity from the border
+    means something. A lit or gradient backdrop returns False."""
+    from PIL import Image  # noqa: F401
+    w, h = im.size
+    px = im.load()
+    border_max = 0
+    for x in range(0, w, 7):
+        for y in (0, 1, 2, h - 1, h - 2, h - 3):
+            border_max = max(border_max, max(px[x, y]))
+    for y in range(0, h, 7):
+        for x in (0, 1, 2, w - 1, w - 2, w - 3):
+            border_max = max(border_max, max(px[x, y]))
+    return border_max <= probe_max
+
+
+_CANON_CUTOUT = "unset"
+
+
+def _canonical_cutout():
+    """The shared cutout module, generation/comfy_nodes/toe_rembg/cutout.py.
+
+    That file is THE algorithm, and the ComfyUI node imports the very same one —
+    which is the point. It used to exist twice, a weaker copy in the node and a
+    stronger one here, and they drifted: the node shipped without hole reclaim
+    or trimming, so a node-cut portrait and a backend-cut portrait of the same
+    art came out different.
+
+    Loaded by path rather than by package import because it lives outside the
+    backend tree (it has to sit next to the node so installers can copy the
+    directory into ComfyUI). Returns None when it or rembg is unavailable —
+    the frozen build deliberately excludes rembg/onnxruntime (~200MB for a path
+    most players never reach), so on a player's machine this is the normal,
+    expected answer and the ladder below carries on."""
+    global _CANON_CUTOUT
+    if _CANON_CUTOUT == "unset":
+        try:
+            import importlib.util
+            root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            path = os.path.join(root, "generation", "comfy_nodes", "toe_rembg", "cutout.py")
+            spec = importlib.util.spec_from_file_location("everspire_cutout", path)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            _CANON_CUTOUT = mod
+        except Exception as e:
+            print(f"[Cutout] shared cutout module unavailable ({e}) — using fallbacks")
+            _CANON_CUTOUT = None
+    return _CANON_CUTOUT
+
+
+def _cutout_via_comfy_python(master_path: str, out_path: str) -> bool:
+    """Run the shared cutout using ComfyUI's python instead of ours.
+
+    The shipped build excludes rembg/onnxruntime — 200MB on every download for
+    a path most players never reach — so the backend cannot run the good
+    algorithm in-process. But a player who can generate a portrait at all
+    necessarily has ComfyUI installed, and ITS python has rembg. Borrowing it
+    gives a player the identical cutout for free.
+
+    This is the difference between a friend getting whole heroes and getting
+    the flood's holed ones: measured on a simulated player install (rembg
+    blocked, node absent), the numpy/scipy fallback left 17 holes in one hero
+    and dropped coverage from 38.5% to 29.5%."""
+    try:
+        import subprocess
+        from services.comfy_service import comfy_paths
+        _, py = comfy_paths()
+        if not py:
+            return False
+        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        script = os.path.join(root, "generation", "comfy_nodes", "toe_rembg", "cutout.py")
+        if not os.path.isfile(script):
+            return False
+        flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+        r = subprocess.run([py, "-s", script, master_path, out_path],
+                           capture_output=True, timeout=180, creationflags=flags)
+        if r.returncode == 0 and os.path.exists(out_path):
+            return True
+        print(f"[Cutout] ComfyUI-python cutout rc={r.returncode} for {master_path}")
+        return False
+    except Exception as e:
+        print(f"[Cutout] ComfyUI-python cutout failed for {master_path}: {e}")
+        return False
+
+
+def _rembg_union_cutout(master_path: str, out_path: str) -> bool:
+    """PRIMARY cutout. Delegates to the shared module; see its docstring for
+    why segmentation decides the figure and the flood may only add to it.
+
+    Tries in-process first (dev machines, where the backend venv has rembg),
+    then out-of-process via ComfyUI's python (players, where it doesn't).
+    Returns False rather than ever writing a bad cut, so callers fall through."""
+    mod = _canonical_cutout()
+    if mod is not None:
+        try:
+            from PIL import Image
+            rgba = mod.cutout_rgba(Image.open(master_path).convert("RGB"))
+            if rgba is not None:
+                rgba.save(out_path)
+                return True
+            # The algorithm ran and rejected its own result. That verdict holds
+            # wherever it runs, so don't pay for a subprocess to hear it again.
+            print(f"[Cutout] union rejected by sanity gate: {master_path}")
+            return False
+        except mod.SegmenterUnavailable:
+            pass          # no rembg here — try ComfyUI's python below
+        except Exception as e:
+            print(f"[Cutout] in-process union failed for {master_path}: {e}")
+    return _cutout_via_comfy_python(master_path, out_path)
+
+
 def _border_flood_cutout(master_path: str, out_path: str) -> bool:
-    """Dependency-free cutout for the clean black-void masters this pipeline
-    produces: flood-fill the FRAME-connected near-black background and keep
-    everything else — including attached dark cloaks/hair that the threshold +
-    rembg path erodes. Refuses (returns False) when the master's border isn't
-    a genuine dark void, so lit/gradient backdrops are left to the ML path."""
+    """Dependency-free LAST-RESORT cutout for the clean black-void masters this
+    pipeline produces: flood-fill the FRAME-connected near-black background and
+    keep everything else. Refuses (returns False) when the master's border
+    isn't a genuine dark void.
+
+    Demoted from primary 2026-08-02 — see _rembg_union_cutout for why. This
+    hollows out dark costumes wherever the antialiased outline lets the flood
+    leak inward, and no threshold fixes that. It survives only for installs
+    with no numpy/scipy/rembg, where a holed hero still beats a black box."""
     try:
         from PIL import Image, ImageDraw
         im = Image.open(master_path).convert("RGB")
         w, h = im.size
-        px = im.load()
-        border_max = 0
-        for x in range(0, w, 7):
-            for y in (0, 1, 2, h - 1, h - 2, h - 3):
-                border_max = max(border_max, max(px[x, y]))
-        for y in range(0, h, 7):
-            for x in (0, 1, 2, w - 1, w - 2, w - 3):
-                border_max = max(border_max, max(px[x, y]))
-        if border_max > 24:
+        if not _border_is_void(im):
             return False  # not a clean void — not this method's job
         MARK = (255, 0, 255)
         work = im.copy()
@@ -1109,25 +1231,36 @@ def _cutout_with_heal(path: str, mode: str = "auto") -> bool:
     if _has_real_alpha(path):
         return True
     master = _save_master(path) or path
-    # PRIMARY: border-connected flood. Hero art is generated on a clean black
-    # void, and connectivity CANNOT erode an attached dark cloak/hair (they're
-    # part of the figure, not reachable from the frame edge) — which is the
-    # exact "half a hero" bug the threshold+rembg path produced. It refuses a
-    # non-void backdrop (returns False), so anything unusual falls through to
-    # the ML cutout. Verified across a fresh generation batch 2026-07-19; also
-    # dependency-free (no numpy/scipy/rembg needed).
-    if _border_flood_cutout(master, path):
+    # PRIMARY: isnet-anime segmentation UNIONED with the void flood.
+    #
+    # The 07-19 note here claimed border connectivity "CANNOT erode an attached
+    # dark cloak/hair (they're part of the figure, not reachable from the frame
+    # edge)". That is wrong, and it is why dark-costumed heroes came out full of
+    # holes. Against a black void the antialiased outline of a black garment
+    # drops below the flood threshold in places, and one such pixel is a doorway
+    # — the flood pours through and hollows the garment from inside. Measured
+    # 2026-08-02 on the validate_e10 heroes: braids severed, thighs hollowed, a
+    # full-length cape reduced to tatters. No threshold fixes a black-on-black
+    # boundary; only a model that knows what a person looks like does.
+    if _rembg_union_cutout(master, path):
         return True
-    # FALLBACK: the rembg/void-mask cutout, for a non-void / lit backdrop.
-    return make_game_cutout(path, mode=mode)
+    # FALLBACK: the older rembg/void-mask cutout (handles lit backdrops).
+    if make_game_cutout(path, mode=mode):
+        return True
+    # LAST RESORT: pure-PIL flood. Holes beat a black box, and this is the only
+    # path that needs no numpy/scipy/rembg at all.
+    return _border_flood_cutout(master, path)
 
 
 def recut_from_master(cutout_path: str, save_backup: bool = True) -> bool:
     """Repair ONE portrait that lost a body part, from its retained black-bg
-    master, with the dependency-free border flood — no GPU, exact same art.
-    The go-to fix when a bad cutout is spotted. Requires the master to still
-    exist (curated pool, or a generation made after master-retention shipped).
-    Returns True on success."""
+    master — no GPU, exact same art. The go-to fix when a bad cutout is
+    spotted. Requires the master to still exist (curated pool, or a generation
+    made after master-retention shipped). Returns True on success.
+
+    Runs the same ladder as a fresh cut. It used to run the border flood
+    directly, which meant "repairing" a hero shot full of holes re-cut it with
+    the method that made the holes."""
     m = _find_master(cutout_path)
     if not m:
         print(f"[Cutout] no master for {cutout_path} — can't re-cut without regenerating")
@@ -1139,7 +1272,7 @@ def recut_from_master(cutout_path: str, save_backup: bool = True) -> bool:
                 shutil.copy2(cutout_path, bak)
             except Exception:
                 pass
-    return _border_flood_cutout(m, cutout_path)
+    return _rembg_union_cutout(m, cutout_path) or _border_flood_cutout(m, cutout_path)
 
 
 def make_game_cutout(path: str, mode: str = "auto") -> bool:
