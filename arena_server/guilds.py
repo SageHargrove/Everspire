@@ -1,4 +1,4 @@
-"""Guilds v1 — design: tower-gacha/docs/guild-social-design.md (signed off
+"""Guilds v1 — design: docs/guild-social-design.md (signed off
 2026-07-06: "Guild" terminology, cap 20 -> upgradeable 50, 50k local founding
 fee, no hero loans, weekly pledge banks / 4-week seasons later).
 

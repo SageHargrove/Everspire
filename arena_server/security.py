@@ -1,7 +1,7 @@
 """
 Arena/World server hardening primitives.
 
-This server is the ONE piece of Tower of Eternity exposed to the open
+This server is the ONE piece of Everspire exposed to the open
 internet (Caddy fronts it; the game client is the only intended caller).
 Everything here exists because "the client is a game client" is not a
 security boundary — anyone can curl these endpoints.
