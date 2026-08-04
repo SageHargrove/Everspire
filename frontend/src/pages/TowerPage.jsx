@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
+import { loadZones, LEGACY_ZONES } from '../lib/zoneDraw'
 import PageTitle from '../components/PageTitle'
-import { SectionHeader } from '../components/ilm/Ilm'
+import { SectionHeader, OrnateRule } from '../components/ilm/Ilm'
 import { getAllTeams, getBase, enterFloor, resolveEvent, resolveExplore, previewFloor, getNarrative, getHero, getLegacies, getSupportBoons, finalizeCombat } from '../api/client'
 
 // Compact chips for the deploy panel — which support boons ride into THIS
@@ -86,18 +87,15 @@ function loadActiveCombat() {
 // 2026-07-15 re-theme: Dread Peaks moved to 41-50 (the winged-beast band),
 // Leviathan's Graveyard restored at 61-70, Blood Lake now covers apex's
 // hydras/nagas at 71-80. ashen_depths.png is spare until a band fits it.
-const ZONES = [
-  { name: 'Overgrown Caverns', slug: 'overgrown_caverns', blurb: 'Root-choked tunnels where goblins, spiders, and wolves den.' },
-  { name: 'Savage Badlands', slug: 'savage_badlands', blurb: 'Sun-cracked wastes ruled by orcs, ogres, and trolls.' },
-  { name: 'Sunken Swamp', slug: 'sunken_swamp', blurb: 'Fetid mire crawling with hobgoblins, lizardmen, and gnolls.' },
-  { name: 'Profane Catacombs', slug: 'profane_catacombs', blurb: 'Desecrated halls of grave scarabs, ghouls, and their jackal wardens.' },
-  { name: 'Dread Peaks', slug: 'dread_peaks', blurb: 'Storm-lashed summits hunted by wyverns, manticores, and griffons.' },
-  { name: 'Crystalline Labyrinth', slug: 'crystalline_depths', blurb: 'A maze of living stone — wardens, animated armor, and juggernauts keep the walls.' },
-  { name: "Leviathan's Graveyard", slug: 'leviathans_graveyard', blurb: 'A drowned dark of leviathan bones — the drowned crew still keeps its watch.' },
-  { name: 'Blood Lake', slug: 'blood_lake', blurb: 'Crimson waters prowled by nagas, giants, and the knights of the dead.' },
-  { name: 'Abyssal Rift', slug: 'abyssal_rift', blurb: 'A wound in reality leaking imps, hellhounds, and pit fiends.' },
-  { name: "Dragon's Boneyard", slug: 'dragons_boneyard', blurb: 'The final ascent — liches, dragons, and dracoliches guard the peak.' },
-]
+// Drawn per player from the 64-plate library (lib/zoneDraw.js), not fixed.
+// Module-level and mutable so zoneFor/floorArtFor keep their old signatures —
+// they are called from several render paths and threading zone state through
+// all of them would be a much larger change for no behavioural gain.
+//
+// Starts as the legacy ten so the very first render has real zones, then the
+// draw replaces it once the manifest lands. Enemies are picked by floor number
+// on the backend, so which zones a player draws never affects what they fight.
+let ZONES = LEGACY_ZONES
 
 // Zones above the built-out 100-floor table just repeat the final boneyard
 // biome rather than breaking — nothing past floor 100 is designed yet.
@@ -109,7 +107,11 @@ function zoneFor(zoneIndex) {
 // you're IN a floor (CombatArena); the zone grid keeps its own tile art.
 function floorArtFor(floorNumber) {
   if (!floorNumber) return null
-  return `/images/floors/${zoneFor(Math.floor((floorNumber - 1) / 10)).slug}.png`
+  const z = zoneFor(Math.floor((floorNumber - 1) / 10))
+  // Library zones carry their own resolved path; legacy zones still live under
+  // /images/floors/. Both shapes have to work, because a save made before the
+  // library existed falls back to the legacy ten.
+  return z.art || `/images/floors/${z.slug}.png`
 }
 
 // Teams carry names (shared with the Squad Overview's toe_team_names store)
@@ -325,11 +327,16 @@ function PostCombatScreen({ lastResult, combatEntities, onReturn, onRerun, busy 
         <div className="ilm-vic-sub">{lastResult.narrative}</div>
       ) : null}
 
-      {/* SPOILS */}
-      <div className="ilm-vic-body">
+      {/* SPOILS — framed as an illuminated plate: hairline border + the four
+          gold corner ticks (screenshot-density pass). */}
+      <div className="ilm-vic-body" style={{ position: 'relative', border: '1px solid rgba(184,151,98,.16)', padding: '18px 22px 20px' }}>
+        <span className="ilm-corner" />
+        <span className="ilm-corner ilm-corner-r" />
+        <span className="ilm-corner ilm-corner-bl" />
+        <span className="ilm-corner ilm-corner-br" />
         {(spoils.length > 0 || lastResult.equipment_drop || lastResult.blueprint_found) && (
           <>
-            <SectionHeader style={{ marginBottom: 12 }}>Spoils</SectionHeader>
+            <SectionHeader ornate style={{ marginBottom: 12 }}>Spoils</SectionHeader>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
               {spoils.map((s, i) => (
                 <div key={i} className="ilm-vic-spoil" style={s.glow ? { boxShadow: '0 0 18px rgba(0,255,255,.25)', borderColor: 'rgba(0,255,255,.4)' } : undefined}>
@@ -359,7 +366,7 @@ function PostCombatScreen({ lastResult, combatEntities, onReturn, onRerun, busy 
         )}
 
         {/* BATTLE REPORT */}
-        <SectionHeader right={<span className="ilm-micro" style={{ color: 'var(--gold-hi)' }}>DAMAGE DEALT</span>} style={{ marginBottom: 10 }}>Battle Report</SectionHeader>
+        <SectionHeader ornate right={<span className="ilm-micro" style={{ color: 'var(--gold-hi)' }}>DAMAGE DEALT</span>} style={{ marginBottom: 10 }}>Battle Report</SectionHeader>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {combatEntities?.heroes?.map(h => {
             const dmg = metrics[h.id] || 0
@@ -466,7 +473,7 @@ function AscentScreen({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
           <span className="ilm-micro" style={{ color: 'var(--muted)' }}>DEEPEST CLIMB</span>
-          <span style={{ height: 1, flex: 1, background: 'rgba(184,151,98,.3)' }} />
+          <OrnateRule />
           <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: 'var(--gold-hi)' }}>FLOOR {highestFloor}</span>
         </div>
 
@@ -564,7 +571,7 @@ function AscentScreen({
             <div key={idx}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                 <span className="ilm-micro" style={{ color: 'var(--muted)' }}>DEPLOY · TEAM {idx + 1}</span>
-                <span style={{ height: 1, flex: 1, background: 'rgba(184,151,98,.2)' }} />
+                <OrnateRule />
               </div>
               <select className="input" style={{ width: '100%', fontFamily: 'Cinzel, serif', fontSize: '0.8rem', letterSpacing: '.08em' }}
                 value={deployTeamIds[idx]}
@@ -724,6 +731,19 @@ export default function TowerPage({ onGoldChange, onNavigate }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [dailyOpen, setDailyOpen] = useState(false)
+  // Bumped once the zone draw resolves. ZONES is module-level (see above), so
+  // mutating it alone would not repaint — this is what makes the drawn zones
+  // actually appear. Fires once; the seed is persisted so it never redraws.
+  const [zonesReady, setZonesReady] = useState(0)
+  useEffect(() => {
+    let alive = true
+    loadZones().then((z) => {
+      if (!alive) return
+      ZONES = z
+      setZonesReady((n) => n + 1)
+    })
+    return () => { alive = false }
+  }, [])
   
   const [team, setTeam] = useState({})
   const [base, setBase] = useState(null)
@@ -1162,7 +1182,7 @@ export default function TowerPage({ onGoldChange, onNavigate }) {
           {/* Event UI (Interrupts combat flow if awaiting choice) */}
           {pendingEvent && !postCombatPhase && (
             <div className="ilm-floorevent gold">
-              <span className="ilm-corner" /><span className="ilm-corner ilm-corner-r" />
+              <span className="ilm-corner" /><span className="ilm-corner ilm-corner-r" /><span className="ilm-corner ilm-corner-br" />
               <div className="ilm-floorevent-eyebrow">FLOOR {resolvedFloor || selectedFloor} · AN EVENT UNFOLDS</div>
               <div className="ilm-floorevent-title">A CHOICE</div>
               <div className="ilm-floorevent-narrative">
@@ -1200,7 +1220,7 @@ export default function TowerPage({ onGoldChange, onNavigate }) {
           {/* Explore UI (Interrupts combat flow if awaiting choice) */}
           {pendingExplore && !postCombatPhase && (
             <div className="ilm-floorevent green">
-              <span className="ilm-corner" /><span className="ilm-corner ilm-corner-r" />
+              <span className="ilm-corner" /><span className="ilm-corner ilm-corner-r" /><span className="ilm-corner ilm-corner-br" />
               <div className="ilm-floorevent-eyebrow" style={{ color: 'var(--green-hi)' }}>A PATH UNTRODDEN</div>
               <div className="ilm-floorevent-title">EXPLORE</div>
               <div className="ilm-floorevent-narrative">

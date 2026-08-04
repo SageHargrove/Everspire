@@ -122,7 +122,7 @@ export default function AuthGate({ onEnter }) {
               beneath the title. (Same-word echo read as a duplicate once the
               title became one word.) */}
           <span className="ghost">ASCEND</span>
-          <span className="solid">EVERSPIRE</span>
+          <span className="solid">GILTGRAVE</span>
         </div>
         <div className="ilm-title-tagline">
           <span className="rule" /><span>Heroes die. Legacies do not.</span><span className="rule" />
@@ -215,7 +215,7 @@ export default function AuthGate({ onEnter }) {
           </>
         )}
 
-        <div className="ilm-title-version">EVERSPIRE · PRE-ALPHA</div>
+        <div className="ilm-title-version">GILTGRAVE · PRE-ALPHA</div>
       </div>
     </div>
   )

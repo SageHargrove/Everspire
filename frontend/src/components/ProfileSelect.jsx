@@ -104,7 +104,7 @@ export default function ProfileSelect({ onSelect }) {
         <div className="ilm-title-stackword">
           {/* ghost = ASCEND on purpose — see AuthGate title block */}
           <span className="ghost">ASCEND</span>
-          <span className="solid">EVERSPIRE</span>
+          <span className="solid">GILTGRAVE</span>
         </div>
         <div className="ilm-title-tagline">
           <span className="rule" /><span>Heroes die. Legacies do not.</span><span className="rule" />
@@ -160,7 +160,7 @@ export default function ProfileSelect({ onSelect }) {
           <button className="btn btn-danger" onClick={handleDelete}>Delete</button>
         </div>
 
-        <div className="ilm-title-version">EVERSPIRE · PRE-ALPHA</div>
+        <div className="ilm-title-version">GILTGRAVE · PRE-ALPHA</div>
       </div>
 
       {/* confirm manager name */}

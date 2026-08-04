@@ -456,7 +456,10 @@ export default function CombatArena({ combatData, onComplete, turnNarrations, in
       </div>
     </div>
     <div className="ilm-combat-stage" style={environment ? {
-      backgroundImage: `linear-gradient(rgba(8,8,12,.72), rgba(8,8,12,.80)), url(${environment})`,
+      // Vignette instead of a flat dim: the zone art breathes at low opacity
+      // mid-stage and falls to ink at the edges (the stage's ::before layer
+      // adds the dot-scatter + outer vignette on top).
+      backgroundImage: `radial-gradient(115% 95% at 50% 40%, rgba(8,6,14,.58), rgba(8,6,14,.93) 76%), url(${environment})`,
       backgroundSize: 'cover', backgroundPosition: 'center',
     } : undefined}>
       {isSurvivalSwarm && turnLimit && (

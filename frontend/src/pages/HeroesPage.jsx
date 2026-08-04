@@ -10,7 +10,6 @@ import { confirmDialog } from '../components/DialogHost'
 import SynthesisChamber from '../components/SynthesisChamber'
 import GiftModal from '../components/GiftModal'
 import { HeartIcon } from '../components/ActionIcons'
-import GameIcon from '../components/GameIcon'
 import Sigil from '../components/Sigil'
 import { classSigil } from '../classSigils'
 
@@ -89,7 +88,9 @@ function DiamondArt({ hero, size = 38 }) {
     <span style={{
       position: 'relative', width: size, height: size, transform: 'rotate(45deg)', flex: 'none',
       border: `1px solid ${accent}`, background: 'linear-gradient(135deg,#1c1030,#0c0718)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 8px rgba(0,0,0,.4)', overflow: 'hidden',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      // soft violet halo so faces read at a glance instead of spreadsheet lines
+      boxShadow: '0 0 16px rgba(139,70,214,.4), 0 0 5px rgba(0,0,0,.5)', overflow: 'hidden',
     }}>
       {hasArt && stage < 2 ? (
         <img
@@ -745,10 +746,10 @@ export default function HeroesPage({ onNavigate }) {
 
         {/* roster grid — the spec's 4-column compact rows. Paged, never
             scrolled: overflow past PAGE_SIZE becomes numbered pages below. */}
-        <div ref={gridRef} className="ent-2" style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '9px 12px', alignContent: 'start' }}>
+        <div ref={gridRef} className="ent-2 ilm-page-weave" style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '9px 12px', alignContent: 'start' }}>
           {displayHeroes.length === 0 && (
             <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
-              <div className="empty-state-icon">{activeTab === 'favorites' ? '♡' : <GameIcon name="classless_runestone" size={52} />}</div>
+              <div className="empty-state-icon">{activeTab === 'favorites' ? '♡' : <Sigil set="ui" name="sparkle" size={46} color="var(--gold-dim)" fallback={<span style={{ color: 'var(--gold-dim)' }}>✦</span>} />}</div>
               <div className="empty-state-title">
                 {activeTab === 'favorites' ? 'No Favorites Yet' : heroes.length === 0 ? 'No Heroes Yet' : 'No Heroes Match These Filters'}
               </div>
@@ -792,7 +793,7 @@ export default function HeroesPage({ onNavigate }) {
           filter: draggedHeroId === hero.id ? 'brightness(1.2)' : 'none',
         }}>
         {/* diamond portrait — same size + centered crop as the roster's DiamondArt */}
-        <span style={{ position: 'relative', width: 74, height: 74, transform: 'rotate(45deg)', flex: 'none', border: `1px solid ${accent}`, background: 'linear-gradient(135deg,#1a0f2e,#0c0718)', overflow: 'hidden', boxShadow: '0 0 8px rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ position: 'relative', width: 74, height: 74, transform: 'rotate(45deg)', flex: 'none', border: `1px solid ${accent}`, background: 'linear-gradient(135deg,#1a0f2e,#0c0718)', overflow: 'hidden', boxShadow: '0 0 16px rgba(139,70,214,.4), 0 0 5px rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {hasArt ? (
             <img src={`/heroes/${hero.id}/card-image?mini=1`} alt={hero.name} draggable={false}
               onError={(e) => { if (!e.currentTarget.dataset.fb) { e.currentTarget.dataset.fb = '1'; e.currentTarget.src = `/${hero.portrait_path}` } }}
@@ -1097,6 +1098,8 @@ export default function HeroesPage({ onNavigate }) {
           <div className="ilm-herodetail" onClick={e => e.stopPropagation()}>
             <span className="ilm-corner" />
             <span className="ilm-corner ilm-corner-r" />
+            {/* no bottom-left tick — that corner is the clip-path notch */}
+            <span className="ilm-corner ilm-corner-br" />
             <button className="ilm-close" style={{ position: 'absolute', top: 14, right: 14, zIndex: 20 }} onClick={() => setExpandedId(null)}>✕</button>
             <HeroDetail
               hero={heroes.find(h => h.id === expandedId)}

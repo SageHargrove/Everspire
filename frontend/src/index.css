@@ -51,15 +51,14 @@
 
 body {
   /* Illuminated ambient stack: violet bloom top-left, deep vignette rising
-     from below, diagonal gold/violet hairlines every 120px, and a faint
-     lavender dot-grid. Fixed so tab switches don't shift it. */
+     from below, diagonal gold/violet hairlines every 120px. Fixed so tab
+     switches don't shift it. (The lavender dot-grid layer is retired —
+     dots read as noise against the geometric hairline/diamond language.) */
   background:
     repeating-linear-gradient(115deg, rgba(184, 151, 98, 0.05) 0 1px, transparent 1px 120px),
     repeating-linear-gradient(-65deg, rgba(150, 110, 230, 0.045) 0 1px, transparent 1px 120px),
-    radial-gradient(rgba(200, 169, 245, 0.16) 1px, transparent 1.5px),
     radial-gradient(80% 70% at 30% 26%, rgba(96, 42, 168, 0.28), transparent 58%),
     radial-gradient(140% 120% at 50% 120%, #0d0818, #08060e 72%);
-  background-size: auto, auto, 180px 150px, auto, auto;
   background-attachment: fixed;
   color: var(--text);
   font-family: 'Cormorant Garamond', Georgia, serif;
@@ -774,6 +773,7 @@ h1, h2, h3, .title-font {
   color: #0a0710;
   font-weight: 700;
   box-shadow: 0 6px 20px rgba(184, 151, 98, 0.35);
+  animation: cta-glow 3.6s ease-in-out infinite;
 }
 .btn-gold:hover { border-color: transparent; background: linear-gradient(120deg, #ffe6a8, var(--gold-hi)); color: #0a0710; }
 
@@ -1019,6 +1019,16 @@ select.input option {
   15% { opacity: 0.9; }
   100% { transform: translateY(-140px); opacity: 0; }
 }
+/* Idle breathing glow for gold CTAs (same curve as the landing page hero CTA). */
+@keyframes cta-glow {
+  0%, 100% { box-shadow: 0 6px 20px rgba(184, 151, 98, 0.35); }
+  50% { box-shadow: 0 6px 38px rgba(255, 216, 138, 0.55); }
+}
+/* Counter-rotation twin of rite-spin — keeps the centering translate for the
+   same reason (a rotate-only frame wipes it and the ring drifts off). */
+@keyframes rite-spin-ccw { from { transform: translate(-50%,-50%) rotate(360deg); } to { transform: translate(-50%,-50%) rotate(0); } }
+/* Slow light band across a full meter / face-down summon card. */
+@keyframes sheen-sweep { from { background-position: 180% 0; } to { background-position: -80% 0; } }
 
 /* Four Tiers — banner-tier showcase (BannerTiers.jsx) */
 .ilm-btiers {
@@ -1107,6 +1117,18 @@ select.input option {
   border-left: 2px solid var(--gold-hi); border-top: 2px solid var(--gold-hi);
   pointer-events: none;
 }
+/* bottom-corner tick variants (four-corner framing on featured plates) */
+.ilm-corner-bl { top: auto; bottom: 0; border-top: none; border-bottom: 2px solid var(--gold-hi); }
+.ilm-corner-br { left: auto; right: 0; top: auto; bottom: 0; border-left: none; border-top: none; border-right: 2px solid var(--gold-hi); border-bottom: 2px solid var(--gold-hi); }
+
+/* Faint manuscript weave laid behind roster/vault grids so the ink between
+   tiles carries texture instead of reading as dead black in stills. ONE
+   direction only, and it matches the body's 115° gold hairlines exactly —
+   crossing angles read as a wonky lattice, and dots are banned (Liam). It
+   just makes the existing diagonal rhythm denser where content lives. */
+.ilm-page-weave {
+  background: repeating-linear-gradient(115deg, rgba(184, 151, 98, 0.05) 0 1px, transparent 1px 64px);
+}
 
 /* Micro-label */
 .ilm-micro {
@@ -1193,6 +1215,14 @@ progress { accent-color: var(--gold); }
   border-bottom: 1px solid rgba(184, 151, 98, 0.28);
   background: linear-gradient(#0a0713, rgba(10, 7, 19, 0));
 }
+/* Gold gradient hairline over the flat border — the same transparent-gold-
+   transparent rule the landing tagline uses; finishes the top edge of every
+   screenshot. */
+.ilm-topbar::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(216, 187, 132, 0.65) 24% 76%, transparent);
+}
 .ilm-topbar-left  { display: flex; align-items: center; gap: 16px; }
 .ilm-topbar-right { display: flex; align-items: center; gap: 24px; font-family: 'Cinzel', serif; letter-spacing: 0.16em; font-size: 0.8rem; color: #c9bfa8; }
 .ilm-topbar-div   { width: 1px; height: 18px; background: rgba(184, 151, 98, 0.35); flex: none; }
@@ -1252,8 +1282,14 @@ progress { accent-color: var(--gold); }
 .ilm-btn-gold {
   color: #0a0710; background: linear-gradient(120deg, var(--gold-max), var(--gold));
   box-shadow: 0 6px 20px rgba(184, 151, 98, 0.35);
+  animation: cta-glow 3.6s ease-in-out infinite;
 }
 .ilm-btn-gold:hover:not(:disabled) { filter: brightness(1.08); }
+@media (prefers-reduced-motion: reduce) {
+  .btn-gold, .ilm-btn-gold,
+  .ilm-combatcard.act, .ilm-enemycard.act,
+  .ilm-unitrow.ally.act, .ilm-unitrow.enemy.act { animation: none; }
+}
 
 .ilm-btn-violet {
   color: #0a0710; background: linear-gradient(120deg, var(--lavender), var(--violet-deep));
@@ -1301,7 +1337,9 @@ progress { accent-color: var(--gold); }
 .ilm-mailbox {
   position: relative; width: 900px; max-width: 94vw; height: 560px; max-height: 88vh;
   border: 1px solid rgba(184, 151, 98, 0.55);
-  background: linear-gradient(160deg, #160d27, #0b0716);
+  background:
+    repeating-linear-gradient(115deg, rgba(184, 151, 98, 0.04) 0 1px, transparent 1px 76px),
+    linear-gradient(160deg, #160d27, #0b0716);
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.75);
   clip-path: polygon(0 0, 100% 0, 100% 100%, 16px 100%);
   display: flex; flex-direction: column;
@@ -1402,7 +1440,7 @@ progress { accent-color: var(--gold); }
 /* confirm-name panel (shared small modal card) */
 .ilm-confirm-panel {
   position: relative; width: 420px; max-width: 90vw; padding: 1.8rem;
-  border: 1px solid rgba(184,151,98,.55); background: linear-gradient(160deg,#160d27,#0b0716);
+  border: 1px solid rgba(184,151,98,.55); background: repeating-linear-gradient(115deg, rgba(184,151,98,.04) 0 1px, transparent 1px 76px), linear-gradient(160deg,#160d27,#0b0716);
   box-shadow: 0 30px 90px rgba(0,0,0,.75); clip-path: polygon(0 0,100% 0,100% 100%,16px 100%);
 }
 
@@ -1445,7 +1483,9 @@ progress { accent-color: var(--gold); }
 }
 .ilm-gate-ring { position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%); border-radius: 50%; }
 .ilm-gate-ring.outer { width: 340px; height: 340px; border: 1px dashed rgba(192,64,96,.35); animation: rite-spin 50s linear infinite; }
-.ilm-gate-ring.inner { width: 284px; height: 284px; border: 1px solid rgba(150,110,230,.22); }
+/* Inner ring counter-rotates, slower, for depth — dashed so the motion is
+   actually visible (a solid circle spins invisibly). */
+.ilm-gate-ring.inner { width: 284px; height: 284px; border: 1px dashed rgba(150,110,230,.24); animation: rite-spin-ccw 80s linear infinite; }
 
 .ilm-rite-spread {
   display: flex; align-items: center; gap: 10px; padding: 14px 40px;
@@ -1758,7 +1798,9 @@ progress { accent-color: var(--gold); }
    ═══════════════════════════════════════════════════════════════════════ */
 .ilm-settings-panel {
   position: relative; width: 440px; max-width: 92vw;
-  background: linear-gradient(160deg, #160d27, #0b0716);
+  background:
+    repeating-linear-gradient(115deg, rgba(184, 151, 98, 0.04) 0 1px, transparent 1px 76px),
+    linear-gradient(160deg, #160d27, #0b0716);
   border: 1px solid rgba(184,151,98,.55);
   box-shadow: 0 30px 90px rgba(0,0,0,.75);
   clip-path: polygon(0 0, 100% 0, 100% 100%, 16px 100%);
@@ -1819,6 +1861,17 @@ progress { accent-color: var(--gold); }
 .ilm-vic-slash.lose {
   background: linear-gradient(90deg, rgba(10,7,19,.96), rgba(80,20,26,.85) 45%, rgba(10,7,19,.96));
   border-top-color: rgba(192,64,64,.6); border-bottom-color: rgba(192,64,64,.4);
+}
+/* Echo hairlines above/below the band (the landing slash-band treatment) so
+   the banner sits between rules instead of floating on black. */
+.ilm-vic-slash::before, .ilm-vic-slash::after {
+  content: ''; position: absolute; left: 7%; right: 7%; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(216,187,132,.55), transparent);
+}
+.ilm-vic-slash::before { top: -7px; }
+.ilm-vic-slash::after  { bottom: -7px; }
+.ilm-vic-slash.lose::before, .ilm-vic-slash.lose::after {
+  background: linear-gradient(90deg, transparent, rgba(192,64,64,.5), transparent);
 }
 .ilm-vic-word {
   font-family: 'Cinzel', serif; font-weight: 900; letter-spacing: .2em;
@@ -1881,7 +1934,9 @@ progress { accent-color: var(--gold); }
   /* Interior padding — the card had NONE, so bars/buttons ran flush into the
      border and overflow-x clipped them ("cutting stuff off like crazy"). */
   padding: 22px 30px 26px;
-  background: linear-gradient(160deg, #160d27, #0b0716);
+  background:
+    repeating-linear-gradient(115deg, rgba(184, 151, 98, 0.04) 0 1px, transparent 1px 76px),
+    linear-gradient(160deg, #160d27, #0b0716);
   border: 1px solid rgba(184,151,98,.55);
   box-shadow: 0 30px 90px rgba(0,0,0,.8);
   clip-path: polygon(0 0, 100% 0, 100% 100%, 18px 100%);
@@ -1894,7 +1949,9 @@ progress { accent-color: var(--gold); }
   position: relative; width: 1300px; max-width: 100%; min-height: 440px; max-height: 100%; box-sizing: border-box;
   overflow-x: hidden; overflow-y: auto;
   padding: 26px 34px 30px;
-  background: linear-gradient(160deg, #160d27, #0b0716);
+  background:
+    repeating-linear-gradient(115deg, rgba(184, 151, 98, 0.04) 0 1px, transparent 1px 76px),
+    linear-gradient(160deg, #160d27, #0b0716);
   border: 1px solid rgba(184,151,98,.55);
   box-shadow: 0 30px 90px rgba(0,0,0,.8);
   clip-path: polygon(0 0, 100% 0, 100% 100%, 18px 100%);
@@ -1941,6 +1998,12 @@ progress { accent-color: var(--gold); }
 .ilm-floorevent-narrative {
   margin: 1rem 0 1.4rem; line-height: 1.65; color: #c8b8dd; font-size: 1.05rem;
   font-style: italic; text-align: center;
+}
+/* Illuminated-plate drop cap — Cormorant's capitals, gilded. No float: the
+   narrative is centered, so the capital stays inline and just rises. */
+.ilm-floorevent-narrative::first-letter {
+  font-size: 3em; line-height: 0.75; font-style: normal; font-weight: 600;
+  color: var(--gold-hi); text-shadow: 0 0 18px rgba(216,187,132,.4);
 }
 .ilm-floorevent-choice {
   display: block; width: 100%; text-align: center; cursor: pointer;
@@ -2051,7 +2114,7 @@ button.ilm-guild-stat.gold { border-color: rgba(216,187,132,.5); background: lin
 .ilm-guild-warside.win { border-color: var(--gold-dim); background: linear-gradient(160deg, rgba(184,151,98,.12), rgba(12,7,24,.6)); box-shadow: 0 0 22px rgba(216,187,132,.15); }
 .ilm-guild-warvs { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; color: var(--muted); }
 
-.ilm-guild-applypanel { position: relative; width: 520px; max-width: 94vw; background: linear-gradient(160deg,#160d27,#0b0716); border: 1px solid rgba(184,151,98,.55); box-shadow: 0 30px 90px rgba(0,0,0,.8); clip-path: polygon(0 0,100% 0,100% 100%,16px 100%); padding: 1.5rem 1.6rem; }
+.ilm-guild-applypanel { position: relative; width: 520px; max-width: 94vw; background: repeating-linear-gradient(115deg, rgba(184,151,98,.04) 0 1px, transparent 1px 76px), linear-gradient(160deg,#160d27,#0b0716); border: 1px solid rgba(184,151,98,.55); box-shadow: 0 30px 90px rgba(0,0,0,.8); clip-path: polygon(0 0,100% 0,100% 100%,16px 100%); padding: 1.5rem 1.6rem; }
 .ilm-guild-applynote { width: 100%; background: rgba(12,7,24,.5); border: 1px solid var(--border); color: var(--text); padding: 0.7rem; font-family: 'Cormorant Garamond', serif; font-size: 0.95rem; resize: vertical; }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -2136,6 +2199,14 @@ button.ilm-guild-stat.gold { border-color: rgba(216,187,132,.5); background: lin
     linear-gradient(to bottom, #140d22, #08060e);
   overflow: hidden; margin-bottom: 0.6rem;
 }
+/* Battlefield vignette laid OVER whatever backdrop the stage has (zone art
+   or plain ink) — edges fall to deep ink so the formations frame the fight.
+   Sits under the rails (z-index 3+). No dot-scatter: dots read as noise
+   against the geometric language (Liam). */
+.ilm-combat-stage::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(95% 85% at 50% 36%, transparent 44%, rgba(5, 3, 10, 0.6) 100%);
+}
 .ilm-combat-survive {
   position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 8;
   font-family: 'Cinzel', serif; letter-spacing: .2em; font-size: 0.66rem; color: var(--gold-hi);
@@ -2158,8 +2229,8 @@ button.ilm-guild-stat.gold { border-color: rgba(216,187,132,.5); background: lin
   background: linear-gradient(-90deg, rgba(10,7,19,.85), rgba(10,7,19,.35));
   clip-path: polygon(10px 0,100% 0,100% 100%,0 100%);
 }
-.ilm-unitrow.ally.act { border-left: 3px solid var(--gold-hi); box-shadow: 0 0 18px rgba(216,187,132,.35); }
-.ilm-unitrow.enemy.act { border-right: 3px solid var(--red); box-shadow: 0 0 18px rgba(192,64,64,.35); }
+.ilm-unitrow.ally.act { border-left: 3px solid var(--gold-hi); box-shadow: 0 0 18px rgba(216,187,132,.35); animation: act-strike-r 1.1s ease-in-out infinite; }
+.ilm-unitrow.enemy.act { border-right: 3px solid var(--red); box-shadow: 0 0 18px rgba(192,64,64,.35); animation: act-strike-l 1.1s ease-in-out infinite; }
 .ilm-unitrow.hit { animation: unit-hit .4s ease-out; }
 .ilm-unitrow.dead { opacity: .4; filter: grayscale(1); }
 .ilm-unitrow.low { border-color: rgba(192,64,64,.5); }
@@ -2182,10 +2253,10 @@ button.ilm-guild-stat.gold { border-color: rgba(216,187,132,.5); background: lin
   transition: box-shadow .15s ease, border-color .15s ease, opacity .3s ease, filter .3s ease;
 }
 .ilm-enemycard.boss { width: 100%; }
-.ilm-enemycard.act { border-color: var(--red); box-shadow: 0 0 14px rgba(192,64,64,.45); }
+.ilm-enemycard.act { border-color: var(--red); box-shadow: 0 0 14px rgba(192,64,64,.45); animation: act-strike-l 1.1s ease-in-out infinite; }
 .ilm-enemycard.dead { opacity: .32; filter: grayscale(1); }
 .ilm-enemycard.hit { animation: unit-hit .4s ease-out; }
-.ilm-enemycard .ilm-unitface.enemy { width: 42px; height: 42px; box-shadow: inset 0 0 0 1px rgba(192,64,64,.6); }
+.ilm-enemycard .ilm-unitface.enemy { width: 42px; height: 42px; box-shadow: inset 0 0 0 1px rgba(192,64,64,.6), 0 0 10px rgba(192,64,64,.28); }
 .ilm-enemycard.boss .ilm-unitface.enemy { width: 60px; height: 60px; }
 .ilm-enemycard .ec-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.56rem; letter-spacing: .04em; color: var(--text-hi); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
 .ilm-enemycard .ec-label { font-family: 'Cinzel', serif; font-size: 0.48rem; letter-spacing: .16em; color: var(--red-hi); }
@@ -2206,7 +2277,23 @@ button.ilm-guild-stat.gold { border-color: rgba(216,187,132,.5); background: lin
   background: linear-gradient(160deg, rgba(20,13,34,.75), rgba(10,7,19,.5));
   transition: box-shadow .15s ease, border-color .15s ease, opacity .3s ease, filter .3s ease;
 }
-.ilm-combatcard.act { border-color: var(--gold-hi); box-shadow: 0 0 16px rgba(216,187,132,.4); }
+/* The acting unit MOVES — a repeating strike-lunge toward the enemy line so
+   whose turn it is reads instantly, not just via the border highlight. */
+@keyframes act-strike-r {
+  0% { transform: translateX(0); }
+  16% { transform: translateX(10px); }
+  28% { transform: translateX(2px); }
+  40% { transform: translateX(6px); }
+  58%, 100% { transform: translateX(0); }
+}
+@keyframes act-strike-l {
+  0% { transform: translateX(0); }
+  16% { transform: translateX(-10px); }
+  28% { transform: translateX(-2px); }
+  40% { transform: translateX(-6px); }
+  58%, 100% { transform: translateX(0); }
+}
+.ilm-combatcard.act { border-color: var(--gold-hi); box-shadow: 0 0 16px rgba(216,187,132,.4); animation: act-strike-r 1.1s ease-in-out infinite; }
 .ilm-combatcard.low { border-color: rgba(192,64,64,.55); }
 .ilm-combatcard.dead { opacity: .4; filter: grayscale(1); }
 .ilm-combatcard.hit { animation: unit-hit .4s ease-out; }
@@ -2216,8 +2303,10 @@ button.ilm-guild-stat.gold { border-color: rgba(216,187,132,.5); background: lin
 .ilm-combatcard .ilm-unitface img { object-position: center; }
 
 .ilm-unitface { width: 50px; height: 50px; flex: none; overflow: hidden; background: #140b22; display: flex; align-items: center; justify-content: center; }
-.ilm-unitface.ally { clip-path: polygon(50% 0,100% 50%,50% 100%,0 50%); border: 0; box-shadow: 0 0 0 1px var(--gold-dim); }
-.ilm-unitface.enemy { width: 54px; height: 54px; box-shadow: inset 0 0 0 1px rgba(192,64,64,.6); }
+/* Idle team-color glow so faces read at a glance even when nobody is acting
+   (the acting card's own act/hit styles still sit on top of this). */
+.ilm-unitface.ally { clip-path: polygon(50% 0,100% 50%,50% 100%,0 50%); border: 0; box-shadow: 0 0 0 1px var(--gold-dim), 0 0 12px rgba(184,151,98,.35); }
+.ilm-unitface.enemy { width: 54px; height: 54px; box-shadow: inset 0 0 0 1px rgba(192,64,64,.6), 0 0 12px rgba(192,64,64,.28); }
 .ilm-unitface img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
 .ilm-unitface-ph { font-size: 1.3rem; opacity: .5; }
 
@@ -2277,7 +2366,7 @@ button.ilm-guild-stat.gold { border-color: rgba(216,187,132,.5); background: lin
 .ilm-stepaway-remind input { accent-color: var(--gold); }
 
 /* feature modals (Tournament / Disconnected / Runner / Scout) */
-.ilm-featmodal { position: relative; background: linear-gradient(160deg,#160d27,#0b0716); border: 1px solid rgba(184,151,98,.55); box-shadow: 0 30px 90px rgba(0,0,0,.8); clip-path: polygon(0 0,100% 0,100% 100%,16px 100%); padding: 1.5rem 1.6rem; }
+.ilm-featmodal { position: relative; background: repeating-linear-gradient(115deg, rgba(184,151,98,.04) 0 1px, transparent 1px 76px), linear-gradient(160deg,#160d27,#0b0716); border: 1px solid rgba(184,151,98,.55); box-shadow: 0 30px 90px rgba(0,0,0,.8); clip-path: polygon(0 0,100% 0,100% 100%,16px 100%); padding: 1.5rem 1.6rem; }
 .ilm-feat-bracket { border: 1px solid var(--border); background: linear-gradient(160deg, rgba(42,22,80,.2), rgba(12,7,24,.6)); padding: 12px 14px; clip-path: polygon(0 0,100% 0,100% 100%,10px 100%); }
 .ilm-feat-runner { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border); background: rgba(12,7,24,.5); padding: 8px 12px; cursor: pointer; }
 .ilm-feat-runner:hover { border-color: var(--gold-dim); }

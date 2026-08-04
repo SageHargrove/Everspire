@@ -61,18 +61,35 @@ function flipFx(item) {
 }
 
 // Card-back suite: ONE uniform back for every card (design: gold diamond over
-// a violet hatch) — the rarity is a surprise until the flip, never leaked by
-// the back. Rendered from parts so it needs no art asset.
+// a violet hatch) — the FACE never leaks rarity. (For 5★+ a soft rarity glow
+// deliberately bleeds from the card's EDGES before the flip — anticipation,
+// see FlipCard — but the printed back itself stays identical for every pull.)
+// Rendered from parts so it needs no art asset.
 function CardBack() {
   return (
     <>
       <div style={{ position: 'absolute', inset: 6, border: '1px solid rgba(150,110,230,.35)', background: 'repeating-linear-gradient(45deg, rgba(150,110,230,.07) 0 10px, transparent 10px 20px)' }} />
-      <div style={{ width: '22%', aspectRatio: '1', maxWidth: 40, transform: 'rotate(45deg)', border: '1px solid #b89762', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: '32%', aspectRatio: '1', background: '#b89762' }} />
+      {/* soft light pooling high on the card — reads as lacquer, not flat ink */}
+      <div style={{ position: 'absolute', inset: 6, pointerEvents: 'none', background: 'radial-gradient(70% 45% at 50% 24%, rgba(216,187,132,.1), transparent 70%)' }} />
+      {/* embossed diamond sigil — nested outline + lit pip, stamped shadows */}
+      <div style={{ position: 'relative', width: '30%', aspectRatio: '1', maxWidth: 54, transform: 'rotate(45deg)', border: '1px solid #b89762', boxShadow: 'inset 1px 1px 0 rgba(255,224,160,.28), inset -1px -1px 0 rgba(0,0,0,.55), 0 0 14px rgba(184,151,98,.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'absolute', inset: '14%', border: '1px solid rgba(184,151,98,.5)' }} />
+        <div style={{ width: '30%', aspectRatio: '1', background: '#b89762', boxShadow: '0 0 8px rgba(216,187,132,.55)' }} />
       </div>
+      {/* slow light band drifting across the whole back */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(115deg, transparent 42%, rgba(216,187,132,.12) 50%, transparent 58%) 0 0 / 240% 100%', animation: 'sheen-sweep 5.5s linear infinite' }} />
     </>
   )
 }
+
+// Ember drift behind 7★/Z flips — hand-placed offsets (deterministic; a
+// render-time random would reshuffle every re-render).
+const EMBERS = [
+  { left: '12%', dur: 2.6, delay: 0.0 }, { left: '30%', dur: 3.1, delay: 0.9 },
+  { left: '46%', dur: 2.4, delay: 1.6 }, { left: '58%', dur: 3.4, delay: 0.4 },
+  { left: '72%', dur: 2.8, delay: 2.1 }, { left: '86%', dur: 3.2, delay: 1.2 },
+  { left: '22%', dur: 3.6, delay: 2.7 }, { left: '64%', dur: 2.5, delay: 3.1 },
+]
 
 // The revealed face — built from the design's anatomy: rarity-tinted frame,
 // a "hero art" slot (real portrait when we have one), then stars + NAME + CLASS
@@ -92,6 +109,11 @@ function RevealedFace({ item, fx }) {
       {mythic && <div style={{ position: 'absolute', inset: -2, pointerEvents: 'none', background: 'conic-gradient(from 0deg,#ff5c5c,#ffb300,#4dff4d,#00e5ff,#b84dff,#ff5c5c)', animation: 'ov-hue 4s linear infinite' }} />}
       {mythic && <div style={{ position: 'absolute', inset: 1, background: 'linear-gradient(160deg,#1a1130,#0d0818)' }} />}
       <div style={{ position: 'absolute', inset: 5, border: `1px solid rgba(${rgb},.35)`, pointerEvents: 'none' }} />
+      {/* rarity-tinted corner ticks framing the reveal */}
+      <span className="ilm-corner" style={{ borderColor: `rgba(${rgb},.8)` }} />
+      <span className="ilm-corner ilm-corner-r" style={{ borderColor: `rgba(${rgb},.8)` }} />
+      <span className="ilm-corner ilm-corner-bl" style={{ borderColor: `rgba(${rgb},.8)` }} />
+      <span className="ilm-corner ilm-corner-br" style={{ borderColor: `rgba(${rgb},.8)` }} />
 
       {/* art slot — fills the whole card (300×448 ≈ 2:3, matching the
           portrait) so the hero art is large; the name plate overlays the
@@ -139,6 +161,15 @@ function FlipCard({ item, flipped, onFlip, onInspect, width, height }) {
       onClick={!flipped ? onFlip : onInspect}
       title={flipped && onInspect ? `Inspect ${item.name}` : undefined}
     >
+      {/* pre-flip anticipation — for 5★+ the rarity glow leaks softly from the
+          card's edges BEFORE the turn (the printed back stays uniform). */}
+      {!flipped && fx.t >= 5 && (
+        <div style={{ position: 'absolute', inset: -10, pointerEvents: 'none', background: `radial-gradient(62% 58% at 50% 50%, rgba(${fx.rgb},.26), rgba(0,0,0,0) 72%)`, animation: 'ov-aura 2.6s ease-in-out infinite' }} />
+      )}
+      {/* ember drift behind the mythic reveal */}
+      {flipped && fx.mythic && EMBERS.map((e, i) => (
+        <span key={`em${i}`} style={{ position: 'absolute', left: e.left, bottom: 4, width: 4, height: 4, borderRadius: '50%', background: '#ffd88a', boxShadow: '0 0 9px #e8a34c', opacity: 0, pointerEvents: 'none', animation: `ember-rise ${e.dur}s linear ${e.delay}s infinite` }} />
+      ))}
       {/* reveal aura — fades in behind the card once flipped */}
       <div style={{ position: 'absolute', inset: -16, pointerEvents: 'none', opacity: flipped ? fx.auraOpacity : 0, transition: 'opacity .5s ease .3s', background: `radial-gradient(60% 55% at 50% 50%, rgba(${fx.rgb},${fx.t >= 5 ? 0.5 : 0.3}), rgba(0,0,0,0) 70%)`, animation: `ov-aura 3s ease-in-out infinite${fx.mythic ? ', ov-hue 5s linear infinite' : ''}` }} />
       {/* orbiting reveal rings for tier 4+ */}

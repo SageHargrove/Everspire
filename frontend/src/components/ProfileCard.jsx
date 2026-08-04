@@ -69,6 +69,10 @@ export default function ProfileCard({ onClose }) {
   return (
     <div className="ilm-modal-scrim" style={{ zIndex: 330 }} onClick={onClose}>
       <div className="ilm-featmodal" style={{ width: 660, maxWidth: '94vw', padding: 0, clipPath: 'polygon(0 0,100% 0,100% 100%,18px 100%)' }} onClick={e => e.stopPropagation()}>
+        <span className="ilm-corner" style={{ zIndex: 9 }} />
+        <span className="ilm-corner ilm-corner-r" style={{ zIndex: 9 }} />
+        {/* no bottom-left tick — that corner is the clip-path notch */}
+        <span className="ilm-corner ilm-corner-br" style={{ zIndex: 9 }} />
         <button className="ilm-close" style={{ position: 'absolute', top: 10, right: 12, zIndex: 10 }} onClick={onClose}>✕</button>
 
         <div style={{ position: 'relative', display: 'flex', gap: 22, padding: '26px 28px 22px', flexWrap: 'wrap' }}>

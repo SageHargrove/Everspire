@@ -11,13 +11,15 @@ Writing 58 scenes by hand was the alternative and it was worse in every way:
 slow, capped at my imagination, and structurally different from what players
 with GPUs would see.
 
-WHY ScenicILL AND NOT Everspire_Floors_v1. Measured 2026-08-03: Floors_v1
-renders the same dark vertical corridor for every prompt at every strength from
-0.45 to 0.85 and at both epoch 6 and 10 — it memorised one composition, and at
-0.45 it still overrode a base model that rendered the scene correctly on its
-own. The 40 training images were genuinely varied, so this is not a data
-problem and more source art would not fix it. ScenicILL respects the scene;
-it is what produced the current zone plates that read as distinct places.
+WHY Everspire_Floors_v1, AFTER CONCLUDING IT WAS BROKEN. It renders one dark
+vertical corridor for every prompt at every strength — but ONLY for the prompts
+it was tested with, which were long and asked for wide open landscapes. The
+frame is 768x1344; "open grey sky to the horizon" cannot fit it, so the model
+resolved the contradiction as a vertical smear and it looked like the adapter
+had memorised a composition. Given 15-25 word material-and-colour tags that
+suit a tall frame, the same adapter at the same 0.85 renders rich distinct
+places. Prompt style was the variable, not the LoRA — so this stays on the
+in-house adapter and does not take a dependency on third-party ScenicILL.
 
     python tools/build_zone_library.py --count 60
     python tools/build_zone_library.py --plan-only    # write scenes, no GPU
@@ -44,7 +46,7 @@ from services.portrait_cache import ENV_GEN_NEGATIVE             # noqa: E402
 
 OUT = os.path.join(ROOT, "frontend", "public", "images", "floor_library")
 MANIFEST = os.path.join(OUT, "zones.json")
-LORA = "ScenicILL.safetensors:0.8"
+LORA = "Everspire_Floors_v1.safetensors:0.85"
 GEN = (768, 1344)
 SHIP = (941, 1672)
 
@@ -54,6 +56,31 @@ BAND_MIX = {"low": 0.32, "mid": 0.40, "high": 0.28}
 
 def slugify(name):
     return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")[:40]
+
+
+# Water the scene never asked for is the single biggest driver of sameness.
+# Measured on the first mid band: ~17 of 20 plates were the same bright channel
+# reflecting down a wet floor, and the three that escaped were the dry ones —
+# including scenes like Petrified Orchard and The Stilt Gardens, whose prompts
+# mention no water at all. The recipe adds a mirror floor by default, and a
+# mirrored floor forces a centred symmetric composition.
+#
+# So this suppresses water ONLY where the zone didn't call for it. Drowned
+# cities and flooded scriptoria still get their water; dry ones stay dry.
+WATER_WORDS = ("water", "flood", "drowned", "submerg", "pool", "lake", "sea",
+               "river", "brine", "mire", "marsh", "fen", "bog", "swamp",
+               "tide", "puddle", "reflect", "rain", "wet", "canal", "cistern",
+               "shallow", "lagoon", "mere", "sluice", "millpond", "aqueduct")
+DRY_NEGATIVE = ("reflection, reflective floor, standing water, puddles, "
+                "wet ground, mirror surface, perfectly symmetrical")
+
+
+def negative_for(art_prompt):
+    """ENV_GEN_NEGATIVE, plus anti-water terms when the scene isn't watery."""
+    low = art_prompt.lower()
+    if any(w in low for w in WATER_WORDS):
+        return ENV_GEN_NEGATIVE
+    return ENV_GEN_NEGATIVE + ", " + DRY_NEGATIVE
 
 
 def load_manifest():
@@ -85,10 +112,20 @@ def main():
     want = {b: max(0, round(args.count * w) - sum(1 for z in zones if z["band"] == b))
             for b, w in BAND_MIX.items()}
     print(f"inventing: {want}")
+    # shape_idx advances across the WHOLE run, not per band, so the six spatial
+    # types stay evenly spread instead of each band restarting at "sheer face".
+    shape_idx = len(zones)
+    # Leading tags of recent scenes, fed back so the next zone can't reach for
+    # the same materials. Without this six calls produced four bone scenes.
+    subjects = [", ".join(z["art_prompt"].split(",")[:2]).strip()
+                for z in zones if z.get("art_prompt")]
     for band, n in want.items():
         for i in range(n):
             try:
-                z = generate_zone(band, avoid_names=names)
+                z = generate_zone(band, avoid_names=names, shape_idx=shape_idx,
+                                  avoid_subjects=subjects)
+                shape_idx += 1
+                subjects.append(", ".join(z["art_prompt"].split(",")[:2]).strip())
             except Exception as e:
                 print(f"  [{band}] zone generation failed: {e}")
                 continue
@@ -124,7 +161,7 @@ def main():
         dest = os.path.join(OUT, f"{z['band']}_{z['slug']}.png")
         prompt = (f"no humans, no creatures, empty scenery, dark fantasy, "
                   f"{z['art_prompt']}, masterpiece, best quality, very awa, absurdres")
-        wf = CS._build_workflow(prompt, negative=ENV_GEN_NEGATIVE,
+        wf = CS._build_workflow(prompt, negative=negative_for(z["art_prompt"]),
                                 seed=880000 + i * 397, width=GEN[0], height=GEN[1],
                                 hires=True, lora_override=LORA, face_detail=False,
                                 transparent=False, rembg_cutout=False)

@@ -222,7 +222,7 @@ export default function InventoryPage() {
             )}
           </div>
 
-          <div className="ilm-vault-gridscroll">
+          <div className="ilm-vault-gridscroll ilm-page-weave">
             {allItems.length === 0 && (
               <div className="empty-state">
                 <div className="empty-state-title">{filter === 'All' && rarityFilter.size === 0 ? 'The Vault Is Empty' : 'Nothing Matches These Filters'}</div>

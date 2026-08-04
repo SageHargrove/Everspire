@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Redeploy the Everspire world server. Runs ON THE BOX, not locally.
+# Redeploy the Giltgrave world server. Runs ON THE BOX, not locally.
 #
 #   scp -i "$TOE_KEY" deploy/redeploy_world_server.sh toe_deploy.tgz "$TOE_HOST":/home/ubuntu/
 #   ssh -i "$TOE_KEY" "$TOE_HOST" 'bash redeploy_world_server.sh'

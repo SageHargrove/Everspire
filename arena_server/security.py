@@ -1,7 +1,7 @@
 """
 Arena/World server hardening primitives.
 
-This server is the ONE piece of Everspire exposed to the open
+This server is the ONE piece of Giltgrave exposed to the open
 internet (Caddy fronts it; the game client is the only intended caller).
 Everything here exists because "the client is a game client" is not a
 security boundary — anyone can curl these endpoints.
@@ -178,8 +178,21 @@ class BodySizeLimitMiddleware:
 # This service returns JSON, but it IS browser-reachable on a public
 # hostname, so the cheap defenses still apply: no MIME sniffing, no
 # framing (clickjacking), no referrer leakage, and HSTS since Caddy
-# terminates TLS. A restrictive CSP is safe precisely because no page
-# here needs to load anything.
+# terminates TLS.
+#
+# Two CSP tiers. The API keeps the lockdown CSP (no API response needs to
+# load anything). The landing page at "/" and its assets under /landing/
+# are a real page with inline styles/scripts, self-hosted fonts and images —
+# the lockdown CSP renders it as unstyled text. Its CSP still forbids
+# framing, plugins, forms, and ALL network fetches (connect-src 'none';
+# nothing external — the page is fully self-contained by design).
+_CSP_API = b"default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+_CSP_PAGE = (b"default-src 'none'; style-src 'unsafe-inline'; "
+             b"script-src 'unsafe-inline'; img-src 'self'; font-src 'self'; "
+             b"connect-src 'none'; form-action 'none'; "
+             b"frame-ancestors 'none'; base-uri 'none'")
+
+
 class SecurityHeadersMiddleware:
     def __init__(self, app):
         self.app = app
@@ -188,19 +201,25 @@ class SecurityHeadersMiddleware:
         if scope.get("type") != "http":
             return await self.app(scope, receive, send)
 
+        path = scope.get("path", "")
+        is_page = path == "/" or path.startswith("/landing/")
+        # Immutable-ish static art/fonts may be cached; everything else is
+        # no-store exactly as before.
+        cache = (b"public, max-age=86400" if path.startswith("/landing/")
+                 else b"no-store")
+
         async def send_with_headers(message):
             if message.get("type") == "http.response.start":
                 headers = message.setdefault("headers", [])
-                drop = {b"server", b"x-powered-by"}
+                drop = {b"server", b"x-powered-by", b"cache-control"}
                 headers[:] = [(k, v) for k, v in headers if k.lower() not in drop]
                 headers.extend([
                     (b"x-content-type-options", b"nosniff"),
                     (b"x-frame-options", b"DENY"),
                     (b"referrer-policy", b"no-referrer"),
-                    (b"content-security-policy",
-                     b"default-src 'none'; frame-ancestors 'none'; base-uri 'none'"),
+                    (b"content-security-policy", _CSP_PAGE if is_page else _CSP_API),
                     (b"strict-transport-security", b"max-age=31536000; includeSubDomains"),
-                    (b"cache-control", b"no-store"),
+                    (b"cache-control", cache),
                 ])
             await send(message)
 

@@ -1,4 +1,4 @@
-# Everspire — Sound Design Plan (v2 — Sacred-Jazz Fusion)
+# Giltgrave — Sound Design Plan (v2 — Sacred-Jazz Fusion)
 
 Music: **Suno Pro** (v5.5). SFX: keep synth kit, upgrade hero moments later (ElevenLabs free tier if ever needed). VO: deferred indefinitely — stingers carry the payoffs.
 

@@ -91,7 +91,7 @@ def layerdiffuse_preflight() -> dict:
         return {"ok": False, "apply": False, "decode": False, "detail": f"ComfyUI not reachable: {e}"}
 
 
-def _build_workflow(prompt: str, negative: str = "", seed: int = None, init_image_name: str = None, denoise: float = 0.45, width: int = 832, height: int = 1216, hires: bool = False, hires_denoise: float = 0.62, lora_override: str = None, lora_strength_override: float = None, face_detail: bool = None, control_image_name: str = None, control_strength: float = 0.55, control_end: float = 0.5, control_mode: str = 'canny', transparent: bool = False, rembg_cutout: bool = False) -> dict:
+def _build_workflow(prompt: str, negative: str = "", seed: int = None, init_image_name: str = None, denoise: float = 0.45, width: int = 832, height: int = 1216, hires: bool = False, hires_denoise: float = 0.62, lora_override: str = None, lora_strength_override: float = None, face_detail: bool = None, control_image_name: str = None, control_strength: float = 0.55, control_end: float = 0.5, control_mode: str = 'canny', transparent: bool = False, rembg_cutout: bool = False, beast: bool = False) -> dict:
     if face_detail is None:
         face_detail = FACE_DETAIL
     # LayerDiffuse (transparent) already yields RGBA — never double-cut.
@@ -434,7 +434,10 @@ def _build_workflow(prompt: str, negative: str = "", seed: int = None, init_imag
     # comes back already cut, so the backend skips its own cutout.
     if rembg_cutout:
         workflow["52"] = {
-            "inputs": {"images": workflow["9"]["inputs"]["images"], "post_process": True},
+            "inputs": {"images": workflow["9"]["inputs"]["images"], "post_process": True,
+                       # General segmenter for non-humanoids; anime model finds
+                       # nothing on a beast and the fallback flood dissolves it.
+                       "beast": bool(beast)},
             "class_type": "ToE_RembgCutout",
         }
         workflow["9"]["inputs"]["images"] = ["52", 0]
@@ -617,7 +620,7 @@ def _upload_image(file_path: str) -> str | None:
         return None
 
 
-def generate_portrait_comfy(prompt: str, save_path: str, init_image_path: str = None, denoise: float = 0.45, negative: str = "", width: int = 832, height: int = 1216, hires: bool = False, hires_denoise: float = 0.62, lora_override: str = None, lora_strength_override: float = None, _noise_retry: bool = False, control_image_path: str = None, control_strength: float = 0.55, control_end: float = 0.5, control_mode: str = 'canny', transparent: bool = None, rembg_cutout: bool = None, face_detail: bool = None) -> bool:
+def generate_portrait_comfy(prompt: str, save_path: str, init_image_path: str = None, denoise: float = 0.45, negative: str = "", width: int = 832, height: int = 1216, hires: bool = False, hires_denoise: float = 0.62, lora_override: str = None, lora_strength_override: float = None, _noise_retry: bool = False, control_image_path: str = None, control_strength: float = 0.55, control_end: float = 0.5, control_mode: str = 'canny', transparent: bool = None, rembg_cutout: bool = None, face_detail: bool = None, beast: bool = False) -> bool:
     """face_detail: None follows the COMFY_FACE_DETAILER default; False skips
     the detect-and-inpaint pass outright. Callers rendering things with no face
     — monsters, rooms, equipment — should pass False. It was previously only
@@ -646,7 +649,7 @@ def generate_portrait_comfy(prompt: str, save_path: str, init_image_path: str = 
         # False from either level must survive, hence the `is None` checks
         # rather than `or`.
         eff_fd = face_detail if fd is None else fd
-        return _build_workflow(prompt, negative=negative, init_image_name=init_image_name, denoise=denoise, width=width, height=height, hires=hires, hires_denoise=hires_denoise, lora_override=lora_override, lora_strength_override=lora_strength_override, face_detail=eff_fd, control_image_name=control_image_name, control_strength=control_strength, control_end=control_end, control_mode=control_mode, transparent=(transparent if tp is None else tp), rembg_cutout=(rembg_cutout if rb is None else rb))
+        return _build_workflow(prompt, negative=negative, init_image_name=init_image_name, denoise=denoise, width=width, height=height, hires=hires, hires_denoise=hires_denoise, lora_override=lora_override, lora_strength_override=lora_strength_override, face_detail=eff_fd, control_image_name=control_image_name, control_strength=control_strength, control_end=control_end, control_mode=control_mode, transparent=(transparent if tp is None else tp), rembg_cutout=(rembg_cutout if rb is None else rb), beast=beast)
 
     workflow = _wf()
     prompt_id = _queue_prompt(workflow)

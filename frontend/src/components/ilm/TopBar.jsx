@@ -121,7 +121,7 @@ export default function TopBar({
     <header className="ilm-topbar ent-fade">
       <div className="ilm-topbar-left">
         <div className="ilm-diamond"><div className="pip" /></div>
-        <h1 className="ilm-wordmark">EVERSPIRE</h1>
+        <h1 className="ilm-wordmark">GILTGRAVE</h1>
         {onBack && (
           <button className="ilm-back" title="Back" onClick={onBack}><UiIcon name="back-chevron" size={14} fallback="‹" /></button>
         )}

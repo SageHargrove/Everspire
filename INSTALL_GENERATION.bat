@@ -1,6 +1,6 @@
 @echo off
 setlocal
-REM ─── Everspire — personal hero generation installer ─────────────────────
+REM ─── Giltgrave — personal hero generation installer ─────────────────────
 REM Sets up local AI generation so YOUR summons get unique, never-before-
 REM seen heroes instead of the shared base gallery.
 REM
@@ -38,10 +38,12 @@ del ComfyUI_windows_portable_nvidia.7z 2>nul
 echo [2/4] Downloading the art model (~7GB — grab a coffee)...
 curl -L -C - -o "%COMFY%\models\checkpoints\noobaiXLNAIXL_vPred10Version.safetensors" "https://huggingface.co/Laxhar/noobai-XL-Vpred-1.0/resolve/main/NoobAI-XL-Vpred-v1.0.safetensors" || goto fail
 
-echo [3/5] Downloading the Everspire style models (~450MB)...
+echo [3/5] Downloading the Giltgrave style models (~450MB)...
 curl -L -C - -o "%COMFY%\models\loras\Everspire_Heroes_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Heroes_v1.safetensors" || goto fail
 curl -L -C - -o "%COMFY%\models\loras\Everspire_Monsters_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Monsters_v1.safetensors" || goto fail
 curl -L -C - -o "%COMFY%\models\loras\Everspire_Env_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Env_v1.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\Everspire_Equipment_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Equipment_v1.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\Everspire_Floors_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Floors_v1.safetensors" || goto fail
 curl -L -C - -o "%COMFY%\models\loras\AddMicroDetails_NoobAI_v5.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/AddMicroDetails_NoobAI_v5.safetensors" || goto fail
 
 echo [4/5] Installing the content-aware cutout (transparent hero art, ~200MB)...
@@ -55,8 +57,13 @@ if errorlevel 1 goto cutoutfail
 rem Pull the segmentation weights NOW. rembg fetches isnet-anime.onnx (~176MB)
 rem lazily on the first cutout, so skipping this turns a player's first hero
 rem into a silent download that can fail — and the cutout quietly degrades.
-echo     Downloading the segmentation model (~176MB)...
+echo     Downloading the segmentation models (~350MB)...
 "%PORTABLE%\python_embeded\python.exe" -c "from rembg.sessions.dis_anime import DisSession as S; S.download_models()"
+if errorlevel 1 goto cutoutfail
+rem The general-use model too. isnet-anime cannot segment a spider or a dragon
+rem — it finds nothing, the cutout falls through to the border flood, and dark
+rem monsters come out with their bodies dissolved. Beast art uses this one.
+"%PORTABLE%\python_embeded\python.exe" -c "from rembg.sessions.dis_general_use import DisSession as S; S.download_models()"
 if errorlevel 1 goto cutoutfail
 "%PORTABLE%\python_embeded\python.exe" -c "import rembg, onnxruntime"
 if errorlevel 1 goto cutoutfail

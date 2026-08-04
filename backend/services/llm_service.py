@@ -338,17 +338,83 @@ Respond with only the zone name and description."""
     except Exception:
         return "The Dark Unknown: Shadows obscure the path ahead."
 
+# The subject's SHAPE, rotated deliberately. Content variety alone produced a
+# library that still rhymed: every zone was a different place seen down the
+# same receding funnel, because halls, caverns and corridors all recede by
+# nature. These are phrased as SUBJECTS, not camera directions — "a sheer cliff
+# face" gets a flat frontal composition without ever mentioning a camera, and
+# naming angles directly was measured to dilute the prompt.
+# Only three, because the other three were measured and DO NOT RENDER. Tested
+# 2026-08-03 at 0.85/0.55/0.35 (docs/zone-strength/SHEET_STRENGTH.png):
+#   sheer cliff face      -> a receding lava field, at every strength
+#   one colossal object   -> the object simply absent; "copper bell" drew a ravine
+#   down into a pit       -> a centred glowing column
+# Asking for them anyway doesn't produce a bad version of them, it produces a
+# generic dark recess — worse than not asking. Lowering LoRA strength to let the
+# base model through makes it worse still: the scene gets MORE abstract, not
+# more literal, so 0.85 stays. These three are what the recipe will actually
+# draw, which caps composition variety at three families. Content and palette
+# variety is where zones actually differ; this keeps them from all funnelling.
+SPATIAL_TYPES = [
+    "open ground under a wide sky, the surface itself the subject — cracked "
+    "salt, ash dunes, black water, bone shingle — with sky as a band above it.",
+    "a dense field of vertical forms — trunks, columns, spires, icicles, "
+    "chimneys — packed close, no clear path between them.",
+    "an interior receding away: a hall, nave, gallery or cavern with "
+    "architecture to either side.",
+]
+
+
+# The NOT clauses are load-bearing. Listing only what a band SHOULD contain
+# reliably produced lava fields and spike wastes in LOW — the model reaches for
+# drama unless told which drama belongs higher up. A new player meets the low
+# band for their first 30 floors, so a burning waste down there spends the
+# escalation before the climb has started.
+# Assigned one per zone by index, NOT offered as a list of options.
+#
+# That distinction is the whole point and it was learned the expensive way.
+# Listing alternatives inside a prompt that runs 44 times does not produce
+# variety, it produces a new default: banning violet while naming "bone white,
+# rust, verdigris" as replacements put the word "rust" in 44 prompts out of 44,
+# and left three separate zones that were all bone-white femurs. Enumeration
+# collapses; rotation cannot, because each call sees exactly one palette and
+# never learns the others exist.
+PALETTES = [
+    "bone white and pale grey, almost colourless",
+    "rust red and burnt orange over black",
+    "verdigris green on weathered bronze",
+    "sulphur yellow and dark brown",
+    "cold blue-white, like deep ice",
+    "gold and warm amber against dark stone",
+    "blood red and charcoal",
+    "sea green and grey, waterlogged",
+    "black and white, stark, almost no hue",
+    "dusty rose and faded terracotta",
+    "deep indigo and silver",
+    "olive drab and dead-leaf brown",
+]
+
+
 ZONE_BANDS = {
     "low":  "floors 1-30. Approachable and survivable, but wrong. Natural or "
-            "lightly built: caves, marshes, wastes, quarries, overgrown ruins.",
+            "lightly built: caves, marshes, wastes, quarries, overgrown ruins. "
+            "NOT lava, fire, void, crystal, or anything apocalyptic — a new "
+            "player sees these first and they must feel like a place that "
+            "existed before the tower took it.",
     "mid":  "floors 31-70. Built by someone, then abandoned or defiled. "
-            "Fortresses, cathedrals, foundries, drowned cities, catacombs.",
+            "Fortresses, cathedrals, foundries, drowned cities, catacombs. "
+            "There must be ARCHITECTURE. NOT untouched wilderness, and not "
+            "yet reality breaking down.",
     "high": "floors 71+. Apocalyptic or unreal. Reality is visibly failing: "
-            "voids, impossible geometry, dead titans, seas of fire.",
+            "voids, impossible geometry, dead titans, seas of fire. The "
+            "assigned palette below is not negotiable here — left free, every "
+            "high zone comes back violet, because that is the reflex for "
+            "'unreal'. Measured: 18 of 18.",
 }
 
 
-def generate_zone(band: str = "low", avoid_names: list = None) -> dict:
+def generate_zone(band: str = "low", avoid_names: list = None,
+                  shape_idx: int = None, avoid_subjects: list = None) -> dict:
     """Invent one tower zone: its name, its blurb, and the art prompt for it.
 
     ONE generator for both uses. The shipped zone library is built by calling
@@ -357,15 +423,50 @@ def generate_zone(band: str = "low", avoid_names: list = None) -> dict:
     place and cannot drift apart in tone. Same reasoning as heroes, where the
     LLM writes portrait_prompt for both paths.
 
-    art_prompt is deliberately long. A short scene line loses to a style LoRA's
-    prior — measured repeatedly: "a windswept upland waste" rendered as a dark
-    cave, while a paragraph naming ground cover, structures, sky and light
-    direction rendered the actual place. Enumerate concrete nouns, state what
-    the light is doing, and say outright when the sky is open."""
+    art_prompt is SHORT — and that is counter-intuitive enough to be worth
+    stating plainly, because getting it wrong cost several full runs.
+
+    Long prompts were tried three times and got worse each time. 45-70 words of
+    careful compositional description renders as a flat glowing smear; 15-25
+    words of material-and-colour renders a rich, specific place. The monster
+    hints are long because they fight NoobAI's anime-human prior; environments
+    have no such prior to overcome, so extra words only dilute the recipe.
+
+    Two other rules, each earned:
+      - The frame is TALL (768x1344). Asking for a "wide horizontal vista" or
+        an "open horizon" cannot fit it, and the model resolves the
+        contradiction as a vertical smear. This is what made Everspire_Floors_v1
+        look broken — it wasn't; it was being asked for landscapes in a
+        portrait frame.
+      - Naming a light source made every scene a centred glowing column.
+        Describe the PLACE and let the recipe light it.
+
+    SPATIAL_TYPES exists because content variety alone isn't enough: halls and
+    caverns all recede, so a library of them rhymes even when every scene is a
+    different place. It is only three entries long, and the comment above it
+    records which shapes were tried and refused to render — read that before
+    adding a fourth."""
+    # Rotated by the caller (shape_idx) so a built library gets even coverage;
+    # random for a live player, who only draws a handful and would notice a
+    # fixed order more than a repeat.
+    shape = (SPATIAL_TYPES[shape_idx % len(SPATIAL_TYPES)]
+             if shape_idx is not None else random.choice(SPATIAL_TYPES))
+    # 3 shapes x 12 palettes, and 12 is coprime with 3, so consecutive zones
+    # never repeat a shape+palette pairing until all 36 are used.
+    palette = (PALETTES[shape_idx % len(PALETTES)]
+               if shape_idx is not None else random.choice(PALETTES))
     avoid = ""
     if avoid_names:
         avoid = ("\nDo NOT reuse or closely echo any of these existing zone names: "
                  + ", ".join(avoid_names[-60:]) + ".")
+    # Avoiding NAMES does not avoid SUBJECTS. Measured: six independent calls
+    # returned six distinct names and four bone-and-rust scenes, because each
+    # call reaches for the same instinct about what a dark fantasy tower holds.
+    # The renders were near-identical despite the names being fine.
+    if avoid_subjects:
+        avoid += ("\nThe last zones already used these materials and subjects, so "
+                  "pick something else entirely: "
+                  + ", ".join(avoid_subjects[-14:]) + ".")
     prompt = f"""Invent one zone of a dark fantasy tower that heroes climb.
 
 This zone sits in the {band.upper()} band: {ZONE_BANDS.get(band, ZONE_BANDS['low'])}{avoid}
@@ -374,19 +475,56 @@ Return ONLY valid JSON:
 {{
   "name": "2-4 words, evocative, no colon. Not 'The Dark X' or 'X of Shadows'.",
   "blurb": "One sentence a player reads on the zone tile. Concrete, grim, hints at what lives there.",
-  "art_prompt": "60-90 words describing ONLY what a painting of this place shows."
+  "art_prompt": "15-25 words of tags describing ONLY what a painting of this place shows."
 }}
 
-Rules for art_prompt, all load-bearing:
-- Name concrete nouns: what the ground is, what structures stand, what the sky does.
-- State the light source and its direction explicitly.
-- If the sky is open, SAY "open sky, no ceiling". If enclosed, say what the ceiling is.
-- Vary the shot: some zones are wide horizontal vistas, some look down into a
-  pit, some are tight interiors, some are distant silhouettes across water.
-  Do not default to a vertical corridor with a glow at the end.
-- NO people, NO creatures, NO characters. Empty scenery only.
-- No lighting adjectives without a source ("atmospheric", "moody") - say what
-  is emitting the light."""
+art_prompt is SHORT, evocative TAGS - not prose, not a composition brief.
+The caller wraps it in the game's approved environment recipe, which supplies
+style, detail and lighting; duplicating those fights it.
+
+LENGTH IS THE WHOLE TRICK. 15-25 words. Measured: 20-word material-and-colour
+tags like "a wound torn in reality, a violet void fissure bleeding light over
+shattered floating rock, embers drawn into the tear" render as rich distinct
+places, while 45-70 words of careful compositional description render as an
+identical glowing smear every time. Long prompts dilute; the recipe wants tags.
+
+NAME MATERIALS AND COLOURS, not camera angles. "black basalt", "rust-red
+water", "bone-white salt", "green copper roofs", "violet fissure". Concrete
+nouns and their colour. Do NOT describe shot type, framing, or where the light
+comes from - the recipe handles that and saying it makes the image about the
+light instead of the place.
+
+VARY THE SUBJECT HARD - that is where zones differ. Rotate across caves, open
+country, water, architecture, machinery, forest, ruins, ice, fire, bone. Two
+zones running should not share a setting.
+
+DO NOT WRITE DARKNESS. No "lost to darkness", "swallowed by shadow", "deepening
+gloom", "black void beyond". The recipe is already a dark fantasy recipe and
+lights the scene itself; naming darkness on top of it renders a near-black
+rectangle. Measured: the four plates that came out unusably dark were the four
+whose prompts said darkness explicitly. These are BACKDROPS with hero art
+composited in front, so a plate that reads as moody alone is worthless if the
+heroes cannot be seen against it. Name what IS there and what colour it is.
+
+MOST ZONES ARE DRY. Standing water, flooding, pools and wet reflective floors
+are massively overused - left alone you write water into about 85% of zones,
+and the recipe renders every one as the same bright reflection down the middle
+of a mirror floor. Unless this zone is genuinely ABOUT water, the ground is dry
+and you should not mention water, pooling or reflections at all.
+
+THE SHAPE OF THIS ONE: {shape}
+THE PALETTE OF THIS ONE: {palette}
+
+Both are assignments, not suggestions. Choose a subject that genuinely has that
+shape and sits naturally in that palette.
+
+DO NOT ECHO EITHER LINE BACK. Write the scene in your own words. Quoting the
+assignment verbatim is a measured failure mode - it produced eighteen prompts
+that all opened "Receding tunnel of..." or "Dense forest of towering...", which
+is exactly the sameness the assignment exists to prevent.
+
+FORBIDDEN. No people, no creatures, no characters, no figures or statues of
+figures. Empty scenery only."""
     raw = _generate_with_claude_fallback(prompt, max_tokens=600, temperature=1.0)
     data = json.loads(_clean_json(raw))
     return {"name": data["name"].strip(),

@@ -42,10 +42,36 @@ export function Mono({ letter, color = 'var(--gold-hi)', size = 34, border, bg, 
   )
 }
 
+// Four gold L-ticks marking the corners of a plate/modal. Parent must be
+// position:relative (all the ilm modal frames already are).
+export function CornerTicks() {
+  return (
+    <>
+      <span className="ilm-corner" />
+      <span className="ilm-corner ilm-corner-r" />
+      <span className="ilm-corner ilm-corner-bl" />
+      <span className="ilm-corner ilm-corner-br" />
+    </>
+  )
+}
+
 /* ---- titles -------------------------------------------------------------- */
 
 export function Eyebrow({ children, style }) {
   return <div className="ilm-eyebrow" style={style}>{children}</div>
+}
+
+// Ornate trailing rule — double hairline with a centered diamond, matching the
+// landing tagline rules. Drop-in for the flat `height:1` span in headers on
+// the money screens (Summon / Tower / Base).
+export function OrnateRule({ color = 'rgba(216,187,132,.55)', dot = 'var(--gold)', style }) {
+  return (
+    <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 24, ...style }}>
+      <span style={{ height: 1, flex: 1, background: `linear-gradient(90deg, transparent, ${color})` }} />
+      <span style={{ width: 5, height: 5, transform: 'rotate(45deg)', background: dot, flex: 'none', opacity: 0.9 }} />
+      <span style={{ height: 1, flex: 1, background: `linear-gradient(90deg, ${color}, transparent)` }} />
+    </span>
+  )
 }
 
 // Two-layer screen title: a ghost outline word behind a solid word.
@@ -62,7 +88,8 @@ export function StackedTitle({ eyebrow, ghost, solid, height = 96, solidSize, gh
 }
 
 // Diamond + label + hairline rule. `right` renders trailing content (e.g. count).
-export function SectionHeader({ children, right, color = 'var(--gold)', dotColor, style }) {
+// `ornate` swaps the flat hairline for the double-rule-with-diamond (major screens).
+export function SectionHeader({ children, right, color = 'var(--gold)', dotColor, ornate = false, style }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, ...style }}>
       <Diamond size={7} color={dotColor || color} />
@@ -70,7 +97,7 @@ export function SectionHeader({ children, right, color = 'var(--gold)', dotColor
         fontFamily: "'Cinzel',serif", letterSpacing: '0.3em',
         fontSize: '0.68rem', color, textTransform: 'uppercase',
       }}>{children}</span>
-      <span style={{ height: 1, flex: 1, background: 'rgba(184,151,98,.2)' }} />
+      {ornate ? <OrnateRule /> : <span style={{ height: 1, flex: 1, background: 'rgba(184,151,98,.2)' }} />}
       {right}
     </div>
   )
@@ -169,14 +196,19 @@ export function Pips({ filled = 0, total = 5, color = 'var(--gold-hi)', size = 1
   )
 }
 
-// Slim gradient progress bar.
+// Slim gradient progress bar. Full meters get a slow sheen sweep — a light
+// band drifting across the fill so "ready" states read alive in stills.
 export function Meter({ pct = 0, from = 'var(--violet-deep)', to = 'var(--gold-hi)', height = 5, border = 'rgba(184,151,98,.3)', glow = false }) {
+  const full = pct >= 100
   return (
     <div style={{ height, background: 'rgba(124,58,214,.15)', border: `1px solid ${border}` }}>
       <div style={{
         width: `${Math.max(0, Math.min(100, pct))}%`, height: '100%',
-        background: `linear-gradient(90deg,${from},${to})`,
-        boxShadow: glow ? `0 0 10px ${to}88` : 'none',
+        background: full
+          ? `linear-gradient(100deg, transparent 38%, rgba(255,255,255,.3) 50%, transparent 62%) 0 0 / 240% 100%, linear-gradient(90deg,${from},${to})`
+          : `linear-gradient(90deg,${from},${to})`,
+        boxShadow: glow || full ? `0 0 10px ${to}88` : 'none',
+        animation: full ? 'sheen-sweep 3.4s linear infinite' : 'none',
       }} />
     </div>
   )
@@ -193,6 +225,6 @@ export function StarRow({ rarity = 1, max = 7, size = '0.8rem', style }) {
 }
 
 export default {
-  Diamond, Mono, Eyebrow, StackedTitle, SectionHeader,
+  Diamond, Mono, CornerTicks, Eyebrow, StackedTitle, SectionHeader, OrnateRule,
   Panel, IlmButton, StatTile, Pips, Meter, StarRow,
 }

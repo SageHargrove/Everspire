@@ -1,4 +1,4 @@
-"""Everspire — content-aware cutout node.
+"""Giltgrave — content-aware cutout node.
 
 A thin ComfyUI wrapper. The algorithm lives in cutout.py, which the game backend
 imports as well, so the two can never drift. See that file for why segmentation
@@ -19,20 +19,24 @@ from .cutout import cutout_rgba
 class ToE_RembgCutout:
     @classmethod
     def INPUT_TYPES(cls):
+        # beast: use the general-purpose segmenter instead of the anime one.
+        # Defaults False so hero art is untouched; enemy generation sets it for
+        # anything not person-shaped. See cutout.SEG_MODEL_BEAST.
         return {"required": {"images": ("IMAGE",)},
-                "optional": {"trim": ("BOOLEAN", {"default": True})}}
+                "optional": {"trim": ("BOOLEAN", {"default": True}),
+                             "beast": ("BOOLEAN", {"default": False})}}
 
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("images",)
     FUNCTION = "cut"
     CATEGORY = "ToE"
 
-    def cut(self, images, trim=True):
+    def cut(self, images, trim=True, beast=False):
         from PIL import Image
         out = []
         for img in images:                                   # (H,W,3) float 0-1
             arr = (img.cpu().numpy() * 255.0).clip(0, 255).astype(np.uint8)
-            rgba = cutout_rgba(Image.fromarray(arr, "RGB"), trim=trim)
+            rgba = cutout_rgba(Image.fromarray(arr, "RGB"), trim=trim, beast=beast)
             if rgba is None:
                 # Gate rejected it, or rembg is missing. Pass the RGB through
                 # opaque rather than emit a broken cut: the portrait arrives on

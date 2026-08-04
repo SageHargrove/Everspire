@@ -445,11 +445,11 @@ export default function SummonPage({ onGoldChange }) {
                 {featured.name}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 8 }}>
-                <span style={{ height: 1, width: 56, background: `${REVEAL_ACCENT(featured, isEquip)}88` }} />
+                <span style={{ height: 1, width: 56, background: `linear-gradient(90deg, transparent, ${REVEAL_ACCENT(featured, isEquip)}cc)` }} />
                 <span style={{ fontFamily: "'Cinzel',serif", letterSpacing: '.28em', fontSize: '0.82rem', color: REVEAL_ACCENT(featured, isEquip) }}>
                   {isEquip ? equipHeadline(featured) : (featured.hero_class || '')}
                 </span>
-                <span style={{ height: 1, width: 56, background: `${REVEAL_ACCENT(featured, isEquip)}88` }} />
+                <span style={{ height: 1, width: 56, background: `linear-gradient(90deg, ${REVEAL_ACCENT(featured, isEquip)}cc, transparent)` }} />
               </div>
             </div>
           ) : (

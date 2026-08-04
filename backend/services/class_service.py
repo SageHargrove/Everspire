@@ -70,30 +70,15 @@ CLASS_EVOLUTIONS = {
             "Monk": ["Grandmaster", "Zenith"]
         }
     },
-    "Tactician": {
-        30: ["Strategist"],
-        60: {"Strategist": ["Grand Strategist", "War Master"]}
-    },
-    "Scout": {
-        30: ["Pathfinder"],
-        60: {"Pathfinder": ["Trailblazer", "Void Walker"]}
-    },
-    "Blacksmith": {
-        30: ["Master Smith"],
-        60: {"Master Smith": ["Forge Lord", "Runesmith"]}
-    },
-    "Chef": {
-        30: ["Head Chef"],
-        60: {"Head Chef": ["Culinary Master", "Brewmaster"]}
-    },
-    "Medic": {
-        30: ["Field Medic"],
-        60: {"Field Medic": ["Surgeon", "Miracle Worker"]}
-    },
-    "Quartermaster": {
-        30: ["Logistics Officer"],
-        60: {"Logistics Officer": ["Guild Treasurer", "Trade Baron"]}
-    },
+    # NOTE: the profession lineages (Tactician/Scout/Blacksmith/Chef/Medic/
+    # Quartermaster/Alchemist/Priest) are defined ONCE, in the BASE / SUPPORT
+    # block below — those are the live support-revamp trees that
+    # support_service mastery branches and PROFESSION_COMBAT_BRANCHES key off.
+    # This block previously carried older single-branch duplicates of seven of
+    # them; Python kept only the later definition, so the duplicates were dead
+    # code and have been removed (their unique names — War Master, Trailblazer,
+    # Void Walker, Head Chef, Culinary Master, Guild Treasurer, Trade Baron,
+    # Master Alchemist — were never reachable in-game).
     "Farmer": {
         30: ["Master Farmer", "Beast Tamer"],
         60: {
@@ -107,10 +92,6 @@ CLASS_EVOLUTIONS = {
             "Trader": ["Guild Master", "Trade Prince"],
             "Smuggler": ["Black Market Baron", "Shadow Broker"]
         }
-    },
-    "Alchemist": {
-        30: ["Master Alchemist"],
-        60: {"Master Alchemist": ["Transmuter", "Philosopher"]}
     },
     "Classless": {
         30: ["Adventurer", "Mercenary", "Hero"],

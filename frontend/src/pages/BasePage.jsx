@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { StackedTitle, Panel, Meter, SectionHeader } from '../components/ilm/Ilm'
+import { StackedTitle, Panel, Meter, SectionHeader, OrnateRule } from '../components/ilm/Ilm'
 import { setBgmScene } from '../audio'
 import { getBase, getFacilities, buildFacility, upgradeFacility, assignFacility, removeFacility, listHeroes, configTraining, getMageTowerUpgrades, buyResearchUpgrade, craftMaterialEquipment, craftBandages, getBaseFloors, assignBaseFloor, getLegacies, getHearth, upgradeBase, getMarketCatalog, purchaseMarketItem, getBaseUpgrades, buyBaseUpgrade, getMailList, claimMail, getShip, buildShip, renameShip, refitShip, buyRefitPoint, getSupportBoons } from '../api/client'
 import MirrorOfFate from '../components/MirrorOfFate'
@@ -742,7 +742,7 @@ const getGenRate = (fac) => {
               <div style={{ flex: '1.2 1 320px', minWidth: 300 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                   <span style={{ fontFamily: "'Cinzel',serif", letterSpacing: '.3em', fontSize: 11, color: 'var(--gold)' }}>THE WARD · HEAVIEST MINDS FIRST</span>
-                  <span style={{ height: 1, flex: 1, background: 'rgba(184,151,98,.2)' }} />
+                  <OrnateRule />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {hurting.length === 0 && (
@@ -1055,7 +1055,7 @@ const getGenRate = (fac) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ width: 7, height: 7, transform: 'rotate(45deg)', background: 'var(--gold)', display: 'inline-block' }} />
                 <span style={{ fontFamily: "'Cinzel',serif", letterSpacing: '.3em', fontSize: 11, color: 'var(--gold)' }}>THE CLIMB</span>
-                <span style={{ height: 1, flex: 1, background: 'rgba(184,151,98,.2)' }} />
+                <OrnateRule />
                 <span style={{ fontFamily: "'Cinzel',serif", fontSize: 10, letterSpacing: '.18em', color: '#ffd88a' }}>DEEPEST · FLOOR {floor}</span>
               </div>
               <div style={{ fontSize: 14.5, fontStyle: 'italic', color: 'var(--muted)', marginTop: 8, lineHeight: 1.45 }}>
@@ -1093,7 +1093,7 @@ const getGenRate = (fac) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ width: 7, height: 7, transform: 'rotate(45deg)', background: 'var(--violet)', display: 'inline-block' }} />
                 <span style={{ fontFamily: "'Cinzel',serif", letterSpacing: '.3em', fontSize: 11, color: 'var(--lavender)' }}>LEGACIES OF THE FALLEN</span>
-                <span style={{ height: 1, flex: 1, background: 'rgba(150,110,230,.25)' }} />
+                <OrnateRule color="rgba(150,110,230,.5)" dot="var(--violet)" />
                 <span style={{ fontFamily: "'Cinzel',serif", fontSize: 10, letterSpacing: '.18em', color: 'var(--muted)' }}>{legacies.length} REMEMBERED</span>
               </div>
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 9, fontSize: 16 }}>

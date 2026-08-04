@@ -76,10 +76,18 @@ docs/cutout-repair.png
 docs/showcase/
 docs/equipment-sample/
 docs/inpaint-poc/
+docs/zone-library/
+docs/zone-test3/
+docs/zone-test4/
+docs/zone-test5/
+docs/zone-strength/
 
 # Retired manhwa-derived art, archived at migration rather than deleted.
 backend/static/portraits/_archive_manhwa_*/
 backend/static/portraits/_base_pool_staging/
 backend/static/portraits/_enemies_staging/
 frontend/public/images/_floors_staging/
-frontend/public/images/_floor_library_floorsv1/
+# Superseded zone-plate sets, kept only so a before/after stays checkable.
+# Each round of prompt fixes archives the previous plates here rather than
+# deleting them; none of these ship. Wildcard so future rounds need no edit.
+frontend/public/images/_floor_library_*/

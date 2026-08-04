@@ -1,4 +1,4 @@
-"""Generate the Windows app icon for Everspire.exe.
+"""Generate the Windows app icon for Giltgrave.exe.
 
 Draws the mark procedurally (no external art dependency) in the ILLUMINATED
 palette from frontend/src/index.css: a gold-framed gothic arch with the tower

@@ -1,4 +1,4 @@
-# Everspire — Art & Icon Drop Manifest
+# Giltgrave — Art & Icon Drop Manifest
 
 Everything below is **already wired in code**. Each asset renders the moment
 you drop the correctly-named file into its folder. Until then a graceful

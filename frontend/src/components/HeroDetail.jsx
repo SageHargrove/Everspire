@@ -180,10 +180,16 @@ export default function HeroDetail({ hero, onManageEquipment, onManageConsumable
             <div style={{ width: `${Math.min(100, ((hero.xp ?? 0) / xpMax) * 100)}%`, height: '100%', background: 'linear-gradient(90deg,#8b46d6,#d8bb84)' }} />
           </div>
 
-          {/* portrait */}
-          <div style={{ position: 'relative', marginTop: 12, minHeight: 240 }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(60% 50% at 50% 40%, rgba(140,70,214,.3), rgba(0,0,0,0) 70%)', animation: 'toe-glow 6s ease-in-out infinite' }} />
-            <img src={portraitSrc} alt={hero.name} style={{ position: 'relative', width: '100%', maxHeight: 320, objectFit: 'contain', filter: dead ? 'grayscale(1) brightness(.6)' : 'none' }} />
+          {/* portrait — the dossier's visual anchor: taller frame, stronger
+              bloom, corner ticks. Fills the left column like the landing
+              page's hero cutout rather than sitting as a thumbnail. */}
+          <div style={{ position: 'relative', marginTop: 12, minHeight: 300 }}>
+            <div style={{ position: 'absolute', inset: -10, background: 'radial-gradient(62% 55% at 50% 38%, rgba(140,70,214,.42), rgba(140,70,214,.12) 55%, rgba(0,0,0,0) 74%)', animation: 'toe-glow 6s ease-in-out infinite' }} />
+            <span className="ilm-corner" />
+            <span className="ilm-corner ilm-corner-r" />
+            <span className="ilm-corner ilm-corner-bl" />
+            <span className="ilm-corner ilm-corner-br" />
+            <img src={portraitSrc} alt={hero.name} style={{ position: 'relative', width: '100%', maxHeight: 430, objectFit: 'contain', filter: dead ? 'grayscale(1) brightness(.6)' : 'none' }} />
             <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 90, pointerEvents: 'none', background: 'linear-gradient(rgba(8,6,14,0),#08060e)' }} />
           </div>
           {!dead && (

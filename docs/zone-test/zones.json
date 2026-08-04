@@ -1,0 +1,38 @@
+[
+ {
+  "name": "Marrow Pit",
+  "blurb": "A flooded quarry where bone-pale stone weeps black water, and the skeletal remains of worked pillars jut from the depths like a drowning giant's ribs.",
+  "art_prompt": "A deep quarry recedes downward, its walls of pale limestone and chalk dropping away below the frame's lower edge. Massive stone pillars—half-carved, abandoned—rise from still black water that reflects nothing. Raking light from the left edge catches the ribbed texture of the worked stone, leaving the right wall in shadow. The water's surface is disturbed only by circular stone platforms and half-submerged scaffolding of rotted wood. Above, a thin slot of overcast grey sky is visible between the quarry's rim, diminishing with distance. Rust-red mineral stains streak the upper walls. The air feels trapped and airless.",
+  "band": "low"
+ },
+ {
+  "name": "Sunken Orchard",
+  "blurb": "A vast depression choked with gnarled fruit trees that bear only rot and iron-dark sap; the soil drinks blood that never dries.",
+  "art_prompt": "A natural bowl of cracked earth descends steeply downward out of frame, its slopes lined with skeletal, twisted fruit trees whose bare branches tangle overhead into a canopy. Afternoon light rakes from the left, throwing long shadows across the pit floor where pale, split fruit lies half-buried in dust and clay the colour of old rust. The far wall of the depression rises and curves away above, lined with root systems exposed like veins. Open sky visible only as a thin rim above the rim. The air feels sealed and stagnant.",
+  "band": "low"
+ },
+ {
+  "name": "Bone Furnace",
+  "blurb": "A vast foundry where something once forged weapons from living bone; now slag pools steam in the dark, and the anvils still ring with nobody striking them.",
+  "art_prompt": "A cavernous foundry stretches upward, its vaulted ceiling lost in shadow. Massive iron anvils sit in neat rows on a floor of cracked white bone-tile, their surfaces rust-stained. Behind them, three enormous furnace mouths gape like tombs, their edges crusted with copper-oxblood slag. Dim light seeps from the furnace interiors, casting long shadows across the anvils toward the viewer's feet. A channel of still, dark liquid—neither water nor metal—runs between the rows. The air above shimmers with heat-haze. The walls are ribbed iron, lined with cold forges. Open sky cannot be seen; only the furnace light and distant red embers mark depth.",
+  "band": "mid"
+ },
+ {
+  "name": "The Flooded Scriptorium",
+  "blurb": "A drowned cathedral-library where the water never recedes, and what swims in the dark between the shelves is not fish.",
+  "art_prompt": "A tall shaft descending into brackish water, stone archways and ribbed vaults receding downward through murk. Shelving racks rise from the submerged floor, their spines and pages visible in silhouette. Raking light enters from a narrow window high on the left wall, cutting across columns and dust suspended in the water column. The deeper levels fade into absolute darkness below. Rust-stained stone, bone-white parchment edges, water the colour of weak tea. No figures. The composition draws the eye down and down.",
+  "band": "mid"
+ },
+ {
+  "name": "The Fractured Vestibule",
+  "blurb": "A vast hollow where reality splits into jagged shards of stone and sky, and the air itself seems to be coming apart.",
+  "art_prompt": "A tall shaft descends through warped stone architecture, its walls fractured into impossible angles that don't meet the eye's logic. Dust-coloured blocks and pillars rise and fall at wrong geometries. Low raking light from the left catches rust-stained fractures and deep shadow-cracks. Far below, a void—not black, but a sickly ochre absence where the floor should be. Above, the ceiling is torn open in jagged triangles, revealing a dead-grey sky beyond. Scattered smaller voids hang suspended in mid-air like holes cut through existence itself. The stone itself looks ancient and splitting, held together by nothing but habit.",
+  "band": "high"
+ },
+ {
+  "name": "Cinder Throat",
+  "blurb": "A vast ravine where reality has split open—one side bleeds molten rock and ash, the other a void of absolute darkness, with a crumbling stone bridge the only crossing.",
+  "art_prompt": "A narrow ravine descends away below the frame, its walls of fractured black stone and oxidized iron reaching upward and out of sight. The left wall glows with contained heat—cracks seep dull red and orange, pooling as rivers of cooled slag at the ravine floor. The right wall is featureless, a seamless void of charcoal shadow. Between them, a single arch bridge of pale, striated stone spans the gap, its center sagging. Light rakes horizontally from the left, catching the bridge's underside and throwing the right wall into deeper darkness. The sky above the ravine's far edge shows a thin band of sickly green. Ash drifts in the still air like suspended dust.",
+  "band": "high"
+ }
+]

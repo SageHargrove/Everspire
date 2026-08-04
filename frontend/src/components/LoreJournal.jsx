@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { getLore } from '../api/client'
-import GameIcon from './GameIcon'
+import Sigil from './Sigil'
 
 // Renders as either an inline section (inline=true, for BasePage tab) or
 // a modal overlay (default, for any direct call with onClose).
@@ -35,7 +35,7 @@ export default function LoreJournal({ onClose, inline = false }) {
 
       {entries && entries.length === 0 && (
         <div className="empty-state" style={{ padding: '3rem 2rem' }}>
-          <div className="empty-state-icon"><GameIcon name="journal" size={44} /></div>
+          <div className="empty-state-icon"><Sigil set="ui" name="codex" size={40} color="var(--gold-dim)" fallback={<span style={{ color: 'var(--gold-dim)' }}>✦</span>} /></div>
           <div className="empty-state-title">The Journal Is Blank</div>
           <div className="empty-state-hint">
             A new page is written every 10 floors, drawn from what your team actually fought

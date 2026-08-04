@@ -60,18 +60,33 @@ an empty releases page. Publish a build first, or accept that it's a
 placeholder until then:
 
 ```bash
-python tools/make_release.py          # stages release/Everspire + zip + setup exe
-gh release create v0.1.0-playtest release/Everspire-playtest.zip release/Everspire-Setup.exe
+python tools/make_release.py          # stages release/Giltgrave + zip + setup exe
+gh release create v0.1.0-playtest release/Giltgrave-playtest.zip release/Giltgrave-Setup.exe
 ```
 
-## Left for the real frontend pass
+## The visual pass (2026-08-03)
 
-The page is deliberately plain — structure and working links, no art direction.
-Whoever does the visual pass gets:
+The page now uses the game's actual Illuminated design system — the exact
+tokens from `frontend/src/index.css` (ink `#08060e`, gold `#b89762`/`#d8bb84`,
+violet bloom, notched panels, parallelogram buttons, ghost/solid stacked
+titles, Cinzel + Cormorant Garamond).
 
-- No external requests. Fonts are system serif, styles are inline, no CDN.
-  Keep it that way; the page is served by the game's API container.
-- Screenshots are the obvious missing element. Parallax cards photograph well
-  and are already built.
-- Copy currently leads on permadeath, the tower, hero egos, and the base, with
-  API key + GPU generation framed as strictly optional.
+Still **zero external requests**: the fonts are self-hosted WOFF2s and all art
+is compressed local copies, served by the same container.
+
+| piece | where |
+|---|---|
+| Page | `arena_server/landing/index.html` (self-contained CSS/JS) |
+| Fonts, key art, zone art, sigils | `arena_server/landing/assets/` — mounted at `/landing/assets` in `main.py` |
+| Screenshot gallery | hidden until captures land in `assets/shots/` — see `deploy/SHOTLIST.md` |
+| Edition chooser | every Download button opens a Standard vs With-Generation modal; deep-linkable via `#choose` |
+| `GET /download?edition=gpu` | redirects to `Giltgrave-Setup-GPU.exe` on the latest release, degrading to the standard installer, then the releases page |
+| `?capture` query param | reveals everything and drops the 100vh hero so one tall headless screenshot shows the whole page (used for design review) |
+
+Regenerating the compressed art (source images stay where they were):
+the prep script lives in the session scratchpad; it is 30 lines of PIL —
+resize zone paintings to 900w JPEG q74, key art to 1400w q82.
+
+Release-asset contract grew by one OPTIONAL name: publishing
+`Giltgrave-Setup-GPU.exe` alongside `Giltgrave-Setup.exe` makes the GPU
+button real; until then it falls back to the standard installer.

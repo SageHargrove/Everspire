@@ -1,0 +1,38 @@
+[
+ {
+  "name": "Drowned Quarry",
+  "blurb": "A flooded stone pit where the water never freezes and things that need drowning are sent to settle.",
+  "art_prompt": "A quarry descends in tiers of pale limestone carved by human hands, each level narrower than the last. Murky water fills the lowest reaches, still and black, reflecting nothing. Rusted chains hang from upper ledges. Blocks of stone sit half-submerged at odd angles. Open sky visible only at the top, far above. The water's surface is smooth but wrong—too smooth, too still—and the stone walls drip with green slime where water meets rock.",
+  "band": "low"
+ },
+ {
+  "name": "Fungal Hollows",
+  "blurb": "A warren of rotted caverns where massive fungi break through soil and stone, their gills weeping phosphorescent spores that cloud the air.",
+  "art_prompt": "A vertical cavern splits downward between two walls of pale, crumbling limestone. Enormous mushroom caps—some broad as houses, others thin and branching—rise from the shadowed floor below and recede into darkness overhead. Their underside gills drip with bioluminescent slime that pools in the stone. The air shimmers with drifting spore-clouds. Exposed root networks hang like tendons from the upper walls. Everything is slick, discolored by rot.",
+  "band": "low"
+ },
+ {
+  "name": "Brass Ossuary",
+  "blurb": "A cathedral of corroded metal where priests once kept the bones of saints—now the brass has turned green, the reliquaries hang open, and something has nested in the galleries.",
+  "art_prompt": "A towering chamber rises from below the frame: walls of verdigris-stained brass sheeting, riveted and seamed, ascending toward a vaulted ceiling lost in shadow. Shelving runs the height of the walls in honeycomb tiers, most empty, some still holding the pale remains of bone within tarnished metal caskets. A grand organ pipe—massive, cracked—leans at an angle in the middle distance. The floor is pale bone-dust and fallen copper plates. Shafts of weak light pierce from somewhere above, illuminating thick suspended dust.",
+  "band": "mid"
+ },
+ {
+  "name": "Sunken Refectory",
+  "blurb": "A flooded cathedral where drowning pilgrims left behind altars of bone and prayer carved into stone that still weeps.",
+  "art_prompt": "A vast underground chamber descends into dark water, its stone floor sloping downward until it vanishes beneath the surface. Massive pillars rise from the depths, their bases submerged. Carved stone benches line the walls in tiers. The vaulted ceiling above is cracked, exposing blind stone. Water drips from fissures, rings spreading across the still black surface. Pale mineral deposits coat the pillars like frost. The air hangs heavy and cold.",
+  "band": "mid"
+ },
+ {
+  "name": "Lattice Expanse",
+  "blurb": "A mathematics made flesh: intersecting planes of obsidian and void stretch in directions that hurt to perceive, while the spaces between them leak starlight and a sound like breaking glass.",
+  "art_prompt": "Towering lattice of black crystalline beams intersecting at impossible angles, receding upward into open sky. Gaps between the geometric structure gape as starlit voids. The ground is fractured white stone, split by fissures that glow with sickly violet light. Where beams meet, reality warps—edges shimmer and refract. The composition rises vertically, with the lattice growing denser and more distorted toward the top, while the base shows clearer geometry grounded in fractured earth.",
+  "band": "high"
+ },
+ {
+  "name": "Calcified Wound",
+  "blurb": "A chasm splits the tower where reality has rotted away—jagged bone-white pillars rise from an abyss that bleeds starlight, and the air itself crystallizes as it falls.",
+  "art_prompt": "Towering calcified spires jut upward from a bottomless void, their surfaces cracked and weeping luminous fluid that falls as slow rain. The chasm walls are ribbed and skeletal, pale grey-white with veins of sickly phosphorescence. Above, open sky shows wrong stars—too many, rotating. Below the frame, the abyss deepens into absolute darkness. Fragments of impossible geometries—half-melted arches, inverted spikes—float suspended in the gap between the pillars.",
+  "band": "high"
+ }
+]

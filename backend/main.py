@@ -16,7 +16,7 @@ from routers import settings as settings_router
 
 init_db()
 
-app = FastAPI(title="Everspire Backend")
+app = FastAPI(title="Giltgrave Backend")
 
 # ─── drive-by request guard (local single-player backend) ─────────────
 #

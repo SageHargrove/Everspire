@@ -1,4 +1,4 @@
-# Security review — Everspire (2026-07-12)
+# Security review — Giltgrave (2026-07-12)
 
 Adversarial application-layer review of both halves of the game, plus the
 fixes applied. Regression tests live in `arena_server/test_security.py`
@@ -188,7 +188,7 @@ Worth stating, since these are where vibecoded apps usually fail:
 - **Command injection / path traversal:** no `os.system`/`subprocess` on user
   input; no user-controlled file paths (portrait paths are now sanitized).
 - **Secrets:** `.env` and `game.db` are gitignored; **the packaged
-  `Everspire.exe` (formerly `InfiniteGacha.exe`) contains no API key** (verified by scanning the binary —
+  `Giltgrave.exe` (formerly `Everspire.exe`, originally `InfiniteGacha.exe`) contains no API key** (verified by scanning the binary —
   `datas=[]` in the spec, and players enter their own key in-game).
 - **Prompt injection:** LLM output is used only as flavor text (names, lore,
   narration) — it never drives a privileged action.

@@ -1,4 +1,4 @@
-"""Everspire launcher — starts the backend and opens the game window.
+"""Giltgrave launcher — starts the backend and opens the game window.
 
 Runs in two modes from one file:
 
@@ -11,8 +11,8 @@ Runs in two modes from one file:
 The packaged layout deliberately keeps game content OUTSIDE the PyInstaller
 bundle, sitting next to the exe:
 
-    Everspire/
-      Everspire.exe        <- this script, frozen
+    Giltgrave/
+      Giltgrave.exe            <- this script, frozen
       _internal/           <- PyInstaller runtime + deps (replaced on update)
       backend/             <- game code, static art, AND saves/  (kept on update)
       frontend/dist/       <- built UI
@@ -48,7 +48,7 @@ URL = f"http://localhost:{PORT}"
 # so this uses a Windows named mutex instead: CreateMutex is atomic across
 # processes (no race window), and the OS auto-releases it if this process
 # exits or crashes, so there's no stale-lock-file cleanup to get wrong.
-_SINGLE_INSTANCE_MUTEX_NAME = "Everspire_SingleInstanceMutex"
+_SINGLE_INSTANCE_MUTEX_NAME = "Giltgrave_SingleInstanceMutex"
 ERROR_ALREADY_EXISTS = 183
 
 
@@ -262,7 +262,7 @@ def open_window(icon_path):
         # content within the same window size — the practical way to "see
         # everything" without going fullscreen, since the window is already
         # resizable by default.
-        webview.create_window('Everspire', URL, width=1280, height=800, zoomable=True)
+        webview.create_window('Giltgrave', URL, width=1280, height=800, zoomable=True)
         # private_mode defaults to True in pywebview, which runs an ephemeral
         # browser profile — localStorage (sound settings, etc.) silently
         # resets every launch. A persistent storage_path next to the exe
@@ -280,10 +280,10 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
 
     if not _acquire_single_instance_lock():
-        print("Another instance of Everspire is already running. Exiting.")
+        print("Another instance of Giltgrave is already running. Exiting.")
         sys.exit(0)
 
-    print("Launching Everspire...")
+    print("Launching Giltgrave...")
 
     backend_process = None
     try:
@@ -302,10 +302,10 @@ if __name__ == "__main__":
                 # invisible — say it in a place the player will actually see.
                 ctypes.windll.user32.MessageBoxW(
                     None,
-                    "Everspire's game server didn't start in time.\n\n"
+                    "Giltgrave's game server didn't start in time.\n\n"
                     "If this keeps happening, check that no other copy is "
                     "running and that port 8000 is free.",
-                    "Everspire", 0x10,
+                    "Giltgrave", 0x10,
                 )
             raise SystemExit(1)
 
@@ -322,7 +322,7 @@ if __name__ == "__main__":
         if not open_window(icon_path):
             import webbrowser
             webbrowser.open(URL)
-            print(f"Everspire is running at {URL} — close this window to stop it.")
+            print(f"Giltgrave is running at {URL} — close this window to stop it.")
             try:
                 while True:
                     time.sleep(1)

@@ -1,5 +1,5 @@
 @echo off
-REM ─── Everspire — one-click setup + play ─────────────────────────────────
+REM ─── Giltgrave — one-click setup + play ─────────────────────────────────
 REM First run: creates a Python env and installs dependencies (needs
 REM Python 3.11+ from python.org, "Add to PATH" checked). After that it
 REM just starts the game. The game opens in your browser at localhost:8000.

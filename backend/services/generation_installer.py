@@ -46,6 +46,13 @@ LORAS = [
     (f"{_LFS}/Everspire_Heroes_v1.safetensors", "Everspire_Heroes_v1.safetensors"),
     (f"{_LFS}/Everspire_Monsters_v1.safetensors", "Everspire_Monsters_v1.safetensors"),
     (f"{_LFS}/Everspire_Env_v1.safetensors", "Everspire_Env_v1.safetensors"),
+    # Equipment and Floors trained alongside the others but sat only on the dev
+    # machine until 2026-08-04 — the exact failure the note above describes,
+    # caught twice now. Equipment art and player-generated zones both render as
+    # the base model without them, which looks like a style regression rather
+    # than a missing file.
+    (f"{_LFS}/Everspire_Equipment_v1.safetensors", "Everspire_Equipment_v1.safetensors"),
+    (f"{_LFS}/Everspire_Floors_v1.safetensors", "Everspire_Floors_v1.safetensors"),
     (f"{_LFS}/AddMicroDetails_NoobAI_v5.safetensors", "AddMicroDetails_NoobAI_v5.safetensors"),
 ]
 
@@ -212,7 +219,7 @@ def _install():
                   "Downloading the art model (~7GB)")
 
         # 3. style LoRAs
-        _set(step_index=4, step="Downloading Everspire style models (~450MB)",
+        _set(step_index=4, step="Downloading Giltgrave style models (~450MB)",
              downloaded=0, total=0)
         for url, name in LORAS:
             _download(url, os.path.join(target_dir, "models", "loras", name),
@@ -242,6 +249,12 @@ def _install():
 
 
 SEG_MODEL_FILE = "isnet-anime.onnx"
+# Beasts need a general segmenter as well. isnet-anime finds nothing on a
+# spider or a dragon, the cutout falls through to the border flood, and the
+# flood eats their dark bodies. Missing this file does not error — it silently
+# degrades every non-humanoid enemy, which is why it is verified below rather
+# than assumed.
+SEG_MODEL_BEAST_FILE = "isnet-general-use.onnx"
 
 
 def _u2net_home() -> str:
@@ -266,6 +279,10 @@ def cutout_ready() -> bool:
             and os.path.isfile(os.path.join(node, "cutout.py"))):
         return False
     if not os.path.isfile(os.path.join(_u2net_home(), SEG_MODEL_FILE)):
+        return False
+    # Both models, not just the anime one. With only the anime weights the
+    # cutout reports ready and then quietly ruins every beast.
+    if not os.path.isfile(os.path.join(_u2net_home(), SEG_MODEL_BEAST_FILE)):
         return False
     if not os.path.isfile(py):
         return False
@@ -328,6 +345,14 @@ def _install_cutout(comfy_dir: str | None = None) -> str | None:
                    timeout=2400)
         if res.returncode != 0 or not os.path.isfile(os.path.join(_u2net_home(), SEG_MODEL_FILE)):
             return "could not download the segmentation model"
+
+    if not os.path.isfile(os.path.join(_u2net_home(), SEG_MODEL_BEAST_FILE)):
+        _set(step="Installing the cutout (2/2: beast segmentation model, ~179MB)")
+        res = _run([py, "-c",
+                    "from rembg.sessions.dis_general_use import DisSession as S; S.download_models()"],
+                   timeout=2400)
+        if res.returncode != 0 or not os.path.isfile(os.path.join(_u2net_home(), SEG_MODEL_BEAST_FILE)):
+            return "could not download the beast segmentation model"
 
     if not cutout_ready():
         return "cutout verification failed"

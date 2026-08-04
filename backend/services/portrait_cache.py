@@ -140,8 +140,36 @@ _BG_PHRASE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Whole clauses that describe SCENERY rather than the subject. The word-level
+# regex above only catches a fixed adjective immediately before "background",
+# so "dark stone dungeon background" sailed straight through — and 101 of the
+# 127 enemy hints end in a clause exactly like that. The model duly painted the
+# scenery, and where it attached to the creature (a plinth, a well rim, a patch
+# of floor) the cutout could not tell it from the body, which is how enemies
+# arrived standing on chunks of masonry.
+_BG_CLAUSE_WORDS = (
+    "background", "backdrop", "environment behind", "scenery",
+    "stone floor", "dungeon floor", "cavern floor", "cave floor",
+    "standing on", "perched on", "rubble underfoot", "ground beneath",
+    "stone platform", "pedestal", "dais",
+)
+
+
 def _strip_bg_for_transparent(prompt: str) -> str:
-    p = _BG_PHRASE_RE.sub('', prompt)
+    """Drop scenery so transparent generation renders the subject alone.
+
+    Clause-level, not word-level: a comma-delimited clause mentioning scenery is
+    dropped entirely. Enemy hints phrase backgrounds too many ways to enumerate,
+    and a half-removed clause ("dark stone dungeon") is worse than none — it
+    still cues the model, just less coherently."""
+    kept = []
+    for clause in prompt.split(","):
+        c = clause.strip()
+        if c and any(w in c.lower() for w in _BG_CLAUSE_WORDS):
+            continue
+        kept.append(clause)
+    p = ",".join(kept)
+    p = _BG_PHRASE_RE.sub('', p)
     p = re.sub(r'\s*,(\s*,)+', ', ', p)      # collapse doubled commas
     p = re.sub(r'\s{2,}', ' ', p).strip().strip(',').strip()
     return p
@@ -527,16 +555,193 @@ HUMANOID_EVIL_NEGATIVE = NEGATIVE_STYLE + (
 # Which enemy/miniboss/boss names get HUMANOID_EVIL_STYLE instead of
 # MONSTER_STYLE — actual person-shaped villains (knights, demons, golems
 # built in a humanoid mold, lich, etc.) vs true beasts/monsters.
+# NOT here: Harpy, Naga, Drowned Naga Queen. All three are danbooru's classic
+# "monster girl" archetypes, and listing them as humanoid gave them the villain
+# style plus FaceDetailer — which produced a bare-midriff anime woman with wings
+# where a bird-creature belonged, despite HUMANOID_EVIL_NEGATIVE already
+# blocking nudity and "monster girl". The negative could not win against a
+# recipe whose whole job is rendering an attractive person. As beasts they get
+# MONSTER_STYLE, whose "not a human or attractive humanoid figure" line exists
+# for exactly this, and skip the face pass that was sculpting the face.
+
+# ── enemy poses, per body plan ──────────────────────────────────────────────
+#
+# Added 2026-08-04. Every one of the 87 enemies was generated with the same
+# hardcoded literal, "imposing menacing pose, dramatic lighting", while heroes
+# have rolled a random camera+pose per generation since July. That single
+# difference is why the roster reads as a row of mannequins: they were all
+# given the same instruction, so they all obeyed it.
+#
+# Split by body plan because a pose has to be physically possible. "Rearing up
+# on hind legs" is right for a wolf and meaningless for a spider; "weapon
+# raised overhead" is right for a goblin and meaningless for a serpent.
+ENEMY_POSES_HUMANOID = [
+    "lunging forward, weapon raised overhead, mid-attack",
+    "hunched low in a fighting crouch, weapon held across the body",
+    "standing tall, arms spread wide, roaring at the viewer",
+    "mid-stride walking toward the viewer, weapon dragging at their side",
+    "turning sharply, cloak or rags swirling, snarling over one shoulder",
+    "braced wide, both hands gripping a heavy weapon, head lowered",
+    "one arm outstretched and clawing toward the viewer, body twisted",
+    "standing still and watchful, weapon lowered, head tilted",
+    "recoiling back mid-step, arms raised defensively, teeth bared",
+    "leaning forward with both fists clenched, shoulders hunched",
+]
+
+ENEMY_POSES_BEAST = [
+    "prowling low toward the viewer, head down, shoulders raised",
+    "rearing up, forelimbs off the ground, jaws open",
+    "coiled and about to spring, muscles tensed, weight on the hind limbs",
+    "mid-leap, limbs extended, body stretched out",
+    "standing broadside, head turned to face the viewer, tail raised",
+    "crouched over its kill, head lifted and snarling",
+    "wings or fins flared wide, body low, threatening display",
+    "circling, body curved, eyes fixed on the viewer",
+    "head thrown back mid-roar, throat exposed, body arched",
+    "stalking forward one limb at a time, body close to the ground",
+]
+
+
+def _enemy_pose(plan: str) -> str:
+    """One pose per generation, chosen for the body plan.
+
+    Serpents and oozes fall to the beast list: it is written without limb
+    assumptions ("coiled", "circling", "head thrown back") precisely so it
+    stays usable for something with no legs."""
+    pool = ENEMY_POSES_BEAST if plan == "beast" else ENEMY_POSES_HUMANOID
+    return random.choice(pool)
+
+
+# ── monstrous humanoid: the category that was missing ───────────────────────
+#
+# Goblins, orcs, trolls, harpies, liches, wraiths, demons. Bipedal and
+# person-shaped, but emphatically not people. Neither existing block works:
+# HUMANOID_EVIL_STYLE is the HERO portrait recipe, so it renders a handsome
+# anime swordsman (Kobold came back exactly that way, and Harpy came back as a
+# bare-midriff woman with wings — a negative cannot beat a recipe whose whole
+# purpose is an attractive person). MONSTER_STYLE says "not a human or
+# attractive humanoid figure" and drags them onto four legs.
+#
+# So this asserts the body plan positively and blocks BOTH failure directions.
+MONSTROUS_HUMANOID_STYLE = (
+    # SHORT on purpose. The first version was 1.9x the length of the creature
+    # hint and simply outvoted it: a "small wiry goblin with sickly green skin"
+    # rendered as a tall gaunt pale humanoid, because the style described one
+    # archetype and every creature converged on it. Same failure that made all
+    # 64 zone plates identical — a long style block becomes the subject.
+    # Everything specific belongs in the hint; this only fixes body plan + look.
+    # "wearing armor and clothing" is POSITIVE on purpose. The negative already
+    # said "shirtless, bare chest, naked torso" and did not hold — most of the
+    # category still came back as bare muscular torsos. A negative only removes
+    # probability mass from a token; it cannot supply what should be there
+    # instead, so the model settles on the anatomy it knows. Asserting the
+    # clothing positively gives it somewhere to go.
+    "(humanoid monster, bipedal:1.3), monstrous inhuman creature, "
+
+    "(dark fantasy manhwa illustration, cel-shaded anime illustration:1.35), "
+    "(bold black ink outlines:1.25), cel shading, well-lit subject, "
+    "balanced natural exposure, vivid distinct material colors, "
+    "full body, masterpiece, best quality, very awa, absurdres, newest"
+)
+
+# Blocks both directions at once: the beautiful-anime-person failure and the
+# dropped-to-all-fours failure. MONSTER_NEGATIVE alone forbids "human" outright,
+# which would fight the two-arms-two-legs body plan this category needs.
+MONSTROUS_HUMANOID_NEGATIVE = NEGATIVE_STYLE + (
+    ", (photorealistic:1.3), (realistic:1.25), 3d model render, cgi, "
+    # -> must not become a beast
+    # "extra limbs" alone was in NEGATIVE_STYLE and did not hold — Kobold came
+    # back with four arms. Asserting the count explicitly is what works, and it
+    # matters most here: this category tells the model "two arms two legs",
+    # which apparently invites it to negotiate.
+    "(extra arms:1.4), (four arms:1.4), multiple arms, extra limbs, "
+    "extra legs, duplicated limbs, malformed anatomy, mutated body, "
+
+    "(quadruped:1.3), on all fours, four-legged animal, animal body, "
+    "feral beast, crawling on four legs, non-humanoid creature, "
+    # -> must not become an attractive person
+    "(beautiful:1.2), (handsome:1.2), (attractive human:1.3), pretty face, "
+    "bishounen, idol, fashion model, cute anime girl, monster girl, "
+    "kemonomimi, anime girl with animal ears, "
+    "topless, nude, nudity, nsfw, sexualized, sexually suggestive, "
+    "cleavage, exposed breasts, bare midriff, navel, bikini, lingerie, "
+    "underwear, swimsuit, partial nudity, see-through clothing, "
+    "skin-tight revealing clothing, pin-up pose, ecchi, fanservice, erotic, "
+    # -> the scenery/quality failures shared with the other blocks
+    "silhouette, full black silhouette, subject rendered as a flat black shape, "
+    "mostly black image, body swallowed by darkness, overexposed, "
+    "second character, multiple subjects, "
+    "standing on a pedestal, pedestal, plinth, podium, display base, "
+    "circular stone platform, stone well, raised dais, figurine stand"
+)
+
+
+# ── how an enemy is SHAPED, which decides its style block ───────────────────
+#
+# Rebuilt 2026-08-04. The old split was a single HUMANOID_ENEMY_NAMES set that
+# had accreted as bosses were written: nearly every named boss was in it and
+# nearly every trash enemy was not. So "Goblin King" was humanoid while plain
+# "Goblin" was a beast, and Bandit — an ordinary human robber — was rendered
+# with MONSTER_STYLE, whose text literally says "not a human". He came out with
+# bone-spiked forearms and clawed bare feet.
+#
+# The axis that actually matters for rendering is BODY PLAN, and it has three
+# values, not two. Two categories forced every bipedal monster to be either an
+# attractive anime person or a quadruped animal, and both are wrong for a
+# goblin, a harpy or a lich.
+#
+#   BEAST_NAMES      not person-shaped at all — quadrupeds, vermin, dragons,
+#                    flyers, oozes. Gets MONSTER_STYLE.
+#   HUMAN_NAMES      an ordinary human being. Gets HUMANOID_EVIL_STYLE, which
+#                    is the hero portrait recipe and is right for people.
+#   (everything else) a monstrous humanoid: bipedal, person-shaped, plainly not
+#                    human. Gets MONSTROUS_HUMANOID_STYLE.
+#
+# Default is monstrous humanoid because that is the largest group in a dark
+# fantasy roster, and because the failure is mildest: a missed beast drawn
+# bipedal is odd, whereas a missed humanoid drawn as an animal is unusable.
+BEAST_NAMES = {
+    "Abyssal Lamprey", "Abyssal Lurker", "Abyssal Serpent", "Abyssal Spider",
+    "Adult Dragon", "Bone-Crab Scavenger", "Carrion Bat", "Cave Shrieker",
+    "Corpse Rat", "Crawling Hand", "Dire Sabertooth", "Dracolich", "Drake",
+    "Elemental", "Giant Rat", "Giant Spider", "Grave Scarab", "Griffon",
+    "Hellhound", "Hydra", "Hydra Spawn", "Mangy Hyena", "Manticore",
+    "Marrow-Worm", "Nemean Lion", "Obsidian Behemoth", "Obsidian Tortoise",
+    "Phoenix", "Plague Crawler", "Spider Queen", "Thalassor, the Undead Leviathan",
+    "The Dracolich Herald", "The Hydra Sovereign", "The Stormcaller, Sky-Tyrant",
+    "Trench Stalker", "Venom Stalker", "Venomous Spider", "Vile Corvid", "Wolf",
+    "Wyvern", "Wyvern Stormrider", "Young Dragon", "The Earthshaker Titan",
+}
+
+# Ordinary people. Pirates, robbers, knights, cultists, vampires — villainous,
+# but a human being underneath. MONSTER_STYLE on any of these is a bug.
+HUMAN_NAMES = {
+    "Bandit", "Blood Thrall", "Galleon Captain", "Captain Iron-Lung",
+    "Drowned Deckhand", "Knight-Captain Mordrek", "Black Knight Commander",
+    "Death Knight", "Lich Acolyte", "Vampire Spawn", "Primordial Vampire",
+    "Cambion", "Succubus",
+}
+
+
+def body_plan(name: str) -> str:
+    """'beast' | 'human' | 'monstrous_humanoid' — see the note above."""
+    if name in BEAST_NAMES:
+        return "beast"
+    if name in HUMAN_NAMES:
+        return "human"
+    return "monstrous_humanoid"
+
+
 HUMANOID_ENEMY_NAMES = {
     "Hobgoblin", "Lizardman", "Hobgoblin Berserker", "Lizardman Stalker",
     "Plague Harbinger", "Minotaur", "Minotaur Juggernaut",
-    "Crypt Warden", "Animated Armor", "Naga", "Death Knight", "Giant",
+    "Crypt Warden", "Animated Armor", "Death Knight", "Giant",
     "Black Knight Commander", "Demon", "Pit Fiend", "Wraith Sovereign",
     "Lich Acolyte", "Archdemon Enforcer",
     "Orc Warchief", "The Troll King", "Skarn the Lizard Chieftain",
     "The Hobgoblin Warlord", "The Grave Sovereign", "Bullhorn the Minotaur Lord",
     "The Ashen Colossus", "Stoneheart the Unbroken", "The Obsidian Tyrant",
-    "The Drowned Naga Queen", "Knight-Captain Mordrek", "Pit Fiend Commander",
+    "Knight-Captain Mordrek", "Pit Fiend Commander",
     "Goblin King", "Vaelor, the Fallen Ascendant",
     # Leviathan's Graveyard — the person-shaped sea enemies (undead sailors,
     # captains, the bone-grafted giant) route through the hero-grade pipeline.
@@ -547,8 +752,8 @@ HUMANOID_ENEMY_NAMES = {
     # Harpy/Frost Wight are person-shaped — they render far better through
     # the hero-grade humanoid recipe than MONSTER_STYLE (Liam, 2026-07-06:
     # "for humanoid ones you could pull from the humanoid prompts").
-    "Harpy", "Frost Wight",
-    "Kobold", "Skeleton", "Feral Ghoul", "Wraith", "Vampire Spawn", "Primordial Vampire",
+    "Frost Wight",
+    "Skeleton", "Feral Ghoul", "Wraith", "Vampire Spawn", "Primordial Vampire",
     "Demon Lord", "Archdemon", "Ancient Guardian",
     "Gorrath the Bonebreaker", "The Rotcaller, Warlord of the Fester Host",
     "Mordane, the Hollow King", "Aetherion, the End of All Things",
@@ -574,6 +779,13 @@ MONSTER_NEGATIVE = NEGATIVE_STYLE + (
     "glow filling the entire frame, monochromatic glowing image, image dominated by one single bright color, "
     "no dark contrast areas in the image, background and subject indistinguishable due to uniform brightness, "
     "subject and background the same brightness, flat even glow with no shadow, "
+    # The model likes to stand a creature on a display base — a stone well, a
+    # circular plinth, a rock platform. It is not a cutout bug: the pedestal is
+    # genuinely drawn and the cutout correctly keeps it, so the enemy arrives in
+    # game standing on a chunk of masonry that belongs to no zone.
+    "standing on a pedestal, pedestal, plinth, podium, display base, statue base, "
+    "circular stone platform, stone well, brick well, round brick rim, "
+    "raised dais, diorama base, figurine stand, ground platform under the creature, "
     "human, human figure, person, people, soldier, adventurer, tiny human silhouette, "
     "second character, multiple subjects, a human standing in the scene, "
     "topless, nude, nudity, nsfw, sexualized, sexually suggestive, suggestive pose, seductive pose, "
@@ -1991,7 +2203,7 @@ ENEMY_PORTRAIT_HINTS = {
 
     # ─── 2026-07-10 variety adds (per-zone roster depth) ───
     "Abyssal Serpent": "(no humans, monster:1.2), a giant deep-sea serpent clearly lit, a long sinuous eel-like body with dark iridescent blue-green scales, faint bioluminescent markings, a fanged maw gaping wide, glowing pale eyes, finned frills, coiling through the water, pitch-black abyssal ocean background",
-    "Giant Rat": "(no humans, monster:1.2), a large diseased rat clearly lit, matted mangy brown fur, beady red eyes, long yellowed incisors, a scaly worm-like tail, hunched aggressive stance, dark stone dungeon background",
+    "Giant Rat": "(no humans, monster:1.2), (giant rodent:1.3), a huge diseased rat clearly lit, rodent head with a blunt snout and whiskers, matted mangy brown fur over the whole body, beady red eyes, long yellowed incisors, small round ears, four legs, a long hairless pink tail, hunched aggressive stance, dark stone dungeon background",
     "Gnoll Marauder": "a savage gnoll marauder clearly lit, a hyena-headed humanoid with a coarse spotted-fur muscular body, a snarling fanged maw, pointed ears, wielding a crude jagged cleaver, bone-and-hide armor, wild eyes, dark wasteland background",
     "Crawling Hand": "(no humans, monster:1.2), a severed undead crawling hand clearly lit, a pale grey-green disembodied hand scuttling on its fingers, exposed bone at the wrist stump, faint necrotic glow, unnervingly animate, dark crypt-floor background",
     "Blood Thrall": "a vampire blood thrall clearly lit, a gaunt pale-skinned humanoid servant with sunken red eyes, sharp fangs, dark tattered noble servant's garb stained with blood, clawed hands, an entranced hungry expression, dark crimson-lit crypt background",
@@ -2049,18 +2261,35 @@ def _generate_enemy_portrait(enemy_name: str, hint: str, tier_dir: str = "normal
         os.makedirs(out_dir, exist_ok=True)
         slug = re.sub(r'[^a-z0-9]', '_', enemy_name.lower())
         path = f"{out_dir}/{slug}.png"
-        if enemy_name in HUMANOID_ENEMY_NAMES:
+        # Enemy hints were written for opaque art and 101 of 127 end in a
+        # scenery clause. Nothing stripped them here — only the hero path
+        # called this — so the model painted a dungeon behind every creature
+        # and sometimes welded a piece of it to their feet.
+        plan = body_plan(enemy_name)
+        if plan == "human":
             prompt = (
                 f"{hint}, villain character design, centered composition, "
-                f"imposing menacing pose, dramatic lighting, {HUMANOID_EVIL_STYLE}"
+                f"{_enemy_pose(plan)}, dramatic lighting, {HUMANOID_EVIL_STYLE}"
             )
             negative = HUMANOID_EVIL_NEGATIVE
+        elif plan == "monstrous_humanoid":
+            prompt = (
+                f"{hint}, humanoid monster design, centered composition, "
+                f"{_enemy_pose(plan)}, dramatic lighting, {MONSTROUS_HUMANOID_STYLE}"
+            )
+            negative = MONSTROUS_HUMANOID_NEGATIVE
         else:
             prompt = (
                 f"{hint}, monster design, dark fantasy creature, centered composition, "
-                f"menacing pose, dramatic lighting, {MONSTER_STYLE}"
+                f"{_enemy_pose(plan)}, dramatic lighting, {MONSTER_STYLE}"
             )
             negative = MONSTER_NEGATIVE
+        # Strip scenery from the COMPOSED prompt, not just the hint: 96 of the
+        # 127 hints end in a background clause AND both style blocks ask for one
+        # of their own ("dark atmospheric background"). Nothing stripped either
+        # here — only the hero path called this — so the model painted a dungeon
+        # behind every creature and sometimes welded a piece of it to their feet.
+        prompt = _strip_bg_for_transparent(prompt)
         # FaceDetailer only for person-shaped enemies. It is a face-detect plus
         # inpaint pass — ~20 extra sampler steps — and on a spider, a dragon or
         # an ooze it is not merely wasted: when it does latch onto something it
@@ -2069,7 +2298,12 @@ def _generate_enemy_portrait(enemy_name: str, hint: str, tier_dir: str = "normal
         # reuse it here.
         success = generate_portrait_comfy(
             prompt, path, negative=negative, lora_override=MONSTER_LORA,
-            face_detail=(enemy_name in HUMANOID_ENEMY_NAMES),
+            face_detail=(plan != "beast"),
+            # Same humanoid split drives the segmenter: person-shaped enemies
+            # keep the anime model, beasts get the general one. Without this a
+            # spider is rejected outright and falls through to the flood, which
+            # eats its dark body — the dissolved-monster bug.
+            beast=(plan == "beast"),
         )
         if success:
             print(f"[Cache] Generated enemy portrait: {enemy_name} -> {path}")

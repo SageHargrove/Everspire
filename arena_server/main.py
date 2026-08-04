@@ -67,7 +67,7 @@ RL_MARKET = (20, 10 * 60)         # market listing/hiring
 RL_WRITE = (120, 60)              # general authenticated writes
 RL_RAID = (30, 10 * 60)
 
-app = FastAPI(title="Everspire — Arena Server")
+app = FastAPI(title="Giltgrave — Arena Server")
 
 # Order matters: body cap runs OUTERMOST so oversized requests die before
 # anything buffers them.
@@ -224,13 +224,26 @@ LANDING_HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "landing
 # /releases/latest/download/<asset> resolves to that exact asset on the newest
 # release, so clicking Download starts the installer downloading immediately —
 # no GitHub page, no picking a file out of a list. The asset name is the
-# contract: tools/make_release.py must keep producing Everspire-Setup.exe.
+# contract: tools/make_release.py must keep producing Giltgrave-Setup.exe.
 #
 # Until the first release exists this 404s, so /download checks and falls back
 # to the releases page rather than dead-ending the button.
-SETUP_ASSET = "Everspire-Setup.exe"
-DOWNLOAD_URL = f"https://github.com/SageHargrove/Everspire/releases/latest/download/{SETUP_ASSET}"
-RELEASES_URL = "https://github.com/SageHargrove/Everspire/releases"
+SETUP_ASSET = "Giltgrave-Setup.exe"
+# The landing page's edition chooser offers a build that ships with the local
+# image-generation pipeline preinstalled. Until that asset exists on a release,
+# /download?edition=gpu falls back to the standard installer (generation can
+# always be enabled in-game afterwards), so the button never dead-ends.
+SETUP_ASSET_GPU = "Giltgrave-Setup-GPU.exe"
+RELEASES_BASE = "https://github.com/SageHargrove/Everspire/releases"
+DOWNLOAD_URL = f"{RELEASES_BASE}/latest/download/{SETUP_ASSET}"
+RELEASES_URL = RELEASES_BASE
+
+# Fonts, key art, and screenshots for the landing page. Same no-CDN rule as
+# the page itself: everything it references is served from this container.
+LANDING_ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "landing", "assets")
+if os.path.isdir(LANDING_ASSETS):
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/landing/assets", StaticFiles(directory=LANDING_ASSETS), name="landing-assets")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -252,41 +265,54 @@ def root_landing():
     except OSError:
         # Never let a missing asset take the root down.
         return HTMLResponse(
-            "<h1>Everspire</h1><p>Multiplayer world server is running. "
+            "<h1>Giltgrave</h1><p>Multiplayer world server is running. "
             f'<a href="{DOWNLOAD_URL}">Download the game</a></p>')
 
 
-_DL_CACHE = {"ok": None, "at": 0.0}
+_DL_CACHE: dict = {}
+
+
+def _asset_exists(asset: str) -> bool:
+    """HEAD-probe a latest-release asset, cached 5 minutes per asset so
+    clicking Download doesn't hit GitHub every time."""
+    now = time.time()
+    hit = _DL_CACHE.get(asset)
+    if hit is None or now - hit[1] > 300:
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                f"{RELEASES_BASE}/latest/download/{asset}", method="HEAD")
+            with urllib.request.urlopen(req, timeout=5) as r:
+                ok = r.status < 400
+        except Exception:
+            ok = False
+        hit = (ok, now)
+        _DL_CACHE[asset] = hit
+    return hit[0]
 
 
 @app.get("/download")
-def download_redirect():
-    """One stable link for the landing page's button, so publishing a new
+def download_redirect(edition: str = ""):
+    """One stable link for the landing page's buttons, so publishing a new
     release needs no edit here and no redeploy of this server.
 
-    Sends the player straight at the installer asset when it exists, and at the
-    releases page when it doesn't — a button that downloads nothing is worse
-    than one that explains itself. The probe is cached for 5 minutes so this
-    doesn't hit GitHub on every click."""
-    now = time.time()
-    if _DL_CACHE["ok"] is None or now - _DL_CACHE["at"] > 300:
-        try:
-            import urllib.request
-            req = urllib.request.Request(DOWNLOAD_URL, method="HEAD")
-            with urllib.request.urlopen(req, timeout=5) as r:
-                _DL_CACHE["ok"] = r.status < 400
-        except Exception:
-            _DL_CACHE["ok"] = False
-        _DL_CACHE["at"] = now
-    return RedirectResponse(DOWNLOAD_URL if _DL_CACHE["ok"] else RELEASES_URL,
-                            status_code=302)
+    ?edition=gpu asks for the generation-bundled installer; if that asset
+    isn't published (yet) it degrades to the standard installer, and if no
+    release exists at all it lands on the releases page — a button that
+    downloads nothing is worse than one that explains itself."""
+    candidates = [SETUP_ASSET_GPU, SETUP_ASSET] if edition == "gpu" else [SETUP_ASSET]
+    for asset in candidates:
+        if _asset_exists(asset):
+            return RedirectResponse(
+                f"{RELEASES_BASE}/latest/download/{asset}", status_code=302)
+    return RedirectResponse(RELEASES_URL, status_code=302)
 
 
 @app.get("/status")
 def root_status():
     """The machine-readable root that used to live at /. Kept so uptime checks
     and anything scripted against it keep working."""
-    return {"service": "Everspire — World Server", "status": "ok",
+    return {"service": "Giltgrave — World Server", "status": "ok",
             "hint": "This is the multiplayer API. Launch the game to play."}
 
 

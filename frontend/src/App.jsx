@@ -657,7 +657,7 @@ export default function App() {
               </div>
 
               <div style={{ textAlign: 'center', fontFamily: "'Cinzel',serif", fontSize: '0.55rem', letterSpacing: '.2em', color: '#4f4766', marginTop: '0.9rem' }}>
-                EVERSPIRE · PRE-ALPHA
+                GILTGRAVE · PRE-ALPHA
               </div>
             </div>
           </div>

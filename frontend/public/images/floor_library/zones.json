@@ -1,0 +1,450 @@
+[
+ {
+  "name": "Ash Flats",
+  "blurb": "A vast expanse of volcanic ash and obsidian shards where the wind never settles and the ground hisses with trapped steam.",
+  "art_prompt": "grey-white volcanic ash plains, black obsidian shards scattered across ground, sulfur-yellow steam vents rising, rust-orange distant ridges, pale sky band above horizon",
+  "band": "low",
+  "slug": "ash_flats"
+ },
+ {
+  "name": "Drowned Orchard",
+  "blurb": "A flooded grove of petrified trees, their trunks rotten and tilted, choked with brackish water that reeks of decay and hosts things that should not swim.",
+  "art_prompt": "petrified wood trunks grey-brown and black, tilted dense-packed, brackish water rust-stained, algae-slick surfaces, submerged root-tangle, fungal blooms pale yellow, water-logged stone foundation stones moss-covered, no sky visible between wood",
+  "band": "low",
+  "slug": "drowned_orchard"
+ },
+ {
+  "name": "Sunken Galleries",
+  "blurb": "A flooded colonnade of cracked marble descends into black water, its pillars slick with luminescent mold that draws things from below.",
+  "art_prompt": "flooded marble colonnade receding into darkness, cracked white pillars, black standing water reflecting sickly green bioluminescent growths, algae-slicked stone, submerged archways fading to void",
+  "band": "low",
+  "slug": "sunken_galleries"
+ },
+ {
+  "name": "Bone Shallows",
+  "blurb": "A vast tidal flat of bleached skeletal debris, where the air tastes of salt and old death, and the ground shifts treacherously beneath each step.",
+  "art_prompt": "endless bone-white shingle flats, scattered ivory tusks and ribs half-buried, grey-green stagnant pools reflecting pale sky, driftwood grey as ash, horizon where flat meets cloudless air",
+  "band": "low",
+  "slug": "bone_shallows"
+ },
+ {
+  "name": "Needle Fen",
+  "blurb": "A brackish swamp choked with thousands of skeletal reed-stalks, their brittle forms clawing upward through stagnant water and rotting mulch.",
+  "art_prompt": "brackish water, skeletal reed-stalks pale grey-brown, dense vertical spikes, rotting mulch, fungal blooms sickly-white and rust, murk-green water between stems, decomposing vegetation, no horizon",
+  "band": "low",
+  "slug": "needle_fen"
+ },
+ {
+  "name": "Saltpan Catacombs",
+  "blurb": "A vast underground salt mine where crystalline passages branch into darkness, and the air itself tastes of ancient seas and slow corrosion.",
+  "art_prompt": "salt-crusted stone archways receding, rust-red mineral veins in white walls, pools of brine reflecting dim light, brittle salt formations like chandeliers, pale ochre sediment layers",
+  "band": "low",
+  "slug": "saltpan_catacombs"
+ },
+ {
+  "name": "Thawmire Flats",
+  "blurb": "A vast permafrost bog where frozen earth heaves and cracks, releasing fumes that sting the lungs and twist the mind.",
+  "art_prompt": "cracked grey-blue ice, dark mud seeping through fractures, stunted black shrubs half-buried, ammonia-yellow mineral deposits crusting the surface, low churning mist, pale sky",
+  "band": "low",
+  "slug": "thawmire_flats"
+ },
+ {
+  "name": "Thornwood Choke",
+  "blurb": "A forest of dead trees so densely packed that sunlight never reaches the floor, where the wood itself has turned black and brittle, and something in the dark between the trunks hunts by sound alone.",
+  "art_prompt": "blackened timber trunks vertical and skeletal, packed too tight to walk between, charred bark splitting, dark burgundy sap crusted thick, loam floor soft and lightless, fungal clusters pale yellow-white on rotting wood, air thick and still",
+  "band": "low",
+  "slug": "thornwood_choke"
+ },
+ {
+  "name": "Rootvault",
+  "blurb": "A vast underground forest of stone-hard roots and tangled timber, dead for ages, where the air itself tastes of copper and rot.",
+  "art_prompt": "petrified root-trunks massive grey-brown black, twisted horizontal vertical packed dense, pale fungal growths crusting cracks, rust-red mineral seeping, receding into shadow",
+  "band": "low",
+  "slug": "rootvault"
+ },
+ {
+  "name": "Corpse Flats",
+  "blurb": "A vast plain of sun-bleached bone and desiccated flesh, where the tower's refuse settles and nothing moves but wind and carrion birds.",
+  "art_prompt": "Endless pale bone-white ground scattered with dull ivory ribs, curved tusks, blackened skulls half-buried in dust. Rust-red stains in cracks. Grey-brown withered sinew stretched between remains. Flat horizon under washed-out sky.",
+  "band": "low",
+  "slug": "corpse_flats"
+ },
+ {
+  "name": "Millstone Garden",
+  "blurb": "A quarry of massive grinding wheels, half-sunken and tilted, their stone surfaces slick with mineral seepage and creeping rust.",
+  "art_prompt": "tilted granite millstones packed dense, rust-red mineral streaks, dark water pooling between, cracked grey stone, ochre sediment, weathered surfaces, sunken beds",
+  "band": "low",
+  "slug": "millstone_garden"
+ },
+ {
+  "name": "Glassworks Deep",
+  "blurb": "A flooded manufactory of fused sand and ash where transparent walls grew like crystal, now cracked and leaking brine that pools in geometric basins.",
+  "art_prompt": "fused glass walls translucent amber, cracked and webbed, brackish water pooling between geometric basins, salt-crusted stone channels receding into darkness, rust-red mineral deposits crusting glass edges, scattered fragments of worked obsidian glinting dully",
+  "band": "low",
+  "slug": "glassworks_deep"
+ },
+ {
+  "name": "Fevermire",
+  "blurb": "A vast wetland of rust-stained water and crumbling clay banks, where the air itself seems diseased and nothing that enters leaves unchanged.",
+  "art_prompt": "rust-red brackish water, cracked ochre clay banks, skeletal blackened timber posts jutting vertical, pale fungi crusting pale stones, sickly green-brown algae slick, sulfur-yellow mineral deposits, wide flat diseased expanse under grey sky",
+  "band": "low",
+  "slug": "fevermire"
+ },
+ {
+  "name": "Calcified Copse",
+  "blurb": "A forest of stone-hard trees, their trunks fused together in a suffocating grip, their bark grey and weeping mineral tears.",
+  "art_prompt": "petrified forest, massive stone trunks fused vertical, grey-brown bark encrusted white mineral, narrow gaps between, pale calcite weeping, damp shadows between pillars",
+  "band": "low",
+  "slug": "calcified_copse"
+ },
+ {
+  "name": "Tallow Galleries",
+  "blurb": "A vast honeycomb of melted wax chambers carved by something patient, walls still soft and weeping, the air thick with animal fat and old smoke.",
+  "art_prompt": "Receding tunnel galleries, cream and ochre wax walls dripping, blackened wick-scars vertical, pooled tallow floors rust-red with mineral seepage, arched wax ceiling ribbed and sagging, distant openings fading to dark amber",
+  "band": "low",
+  "slug": "tallow_galleries"
+ },
+ {
+  "name": "Scourged Flats",
+  "blurb": "A wind-scoured expanse of fractured clay and exposed mineral seams where the tower's foundation bleeds rust into shallow alkali pools.",
+  "art_prompt": "Cracked ochre clay plains, rust-red mineral veins exposed, shallow brackish pools reflecting grey sky, white salt crust edges, distant ridge of dark stone, wind-carved channels, desolate horizontal landscape.",
+  "band": "low",
+  "slug": "scourged_flats"
+ },
+ {
+  "name": "Charred Spinney",
+  "blurb": "A forest fire arrested mid-rage: charcoal trunks stand skeletal and fused, still warm, blocking passage between blackened earth and ash-choked air.",
+  "art_prompt": "charred timber trunks vertical fused dense, blackened bark flaking grey, orange embers smoldering deep in shadow between, ash-pale ground cracked, heat-shimmer rising, acrid smoke curling",
+  "band": "low",
+  "slug": "charred_spinney"
+ },
+ {
+  "name": "Fungal Vaults",
+  "blurb": "A honeycomb of vast chambered mushroom caps, their pale undersides weeping phosphorescent slime, stalks thick as pillars receding into spore-thick dark.",
+  "art_prompt": "cream and grey fungal stalks columnar dense, pale underscore gills webbed intricate, phosphorescent green slime pooling, stone floor cracked ochre, receding arch galleries fading into amber spore-haze, no figures",
+  "band": "low",
+  "slug": "fungal_vaults"
+ },
+ {
+  "name": "Quicksand Shelf",
+  "blurb": "A vast flat expanse of pale clay sinking slowly into itself, where the ground breathes and swallows.",
+  "art_prompt": "Endless pale ochre clay plain, cracked geometric fissures widening, dark loam seeping through splits, grey-white salt crusts rimming each crack, distant horizon bleached and featureless, wide empty sky above",
+  "band": "low",
+  "slug": "quicksand_shelf"
+ },
+ {
+  "name": "Stonebriar Yard",
+  "blurb": "A quarry abandoned to time, where jagged stone pillars rise from rubble like broken teeth, and something vast sleeps beneath the fractured floor.",
+  "art_prompt": "Dense vertical stone spires grey-white jutting from cracked rubble, rust-red mineral seams webbing pale granite, deep shadow gaps between pillars, ochre dust settling on fractured ground.",
+  "band": "low",
+  "slug": "stonebriar_yard"
+ },
+ {
+  "name": "Kiln Expanse",
+  "blurb": "A vast potter's district baked to ceramic hardness, where clay-brick dwellings crumble into dunes and kilns stand cold as tombs.",
+  "art_prompt": "Cracked terracotta brick ruins scattered across dusty rose plain, collapsed kiln domes, clay-dust haze, faded ochre walls half-buried, geometric roof tiles tumbled, heat-warped stone channels, pale sky band above horizon",
+  "band": "mid",
+  "slug": "kiln_expanse"
+ },
+ {
+  "name": "The Ironworks Yard",
+  "blurb": "A vast foundry district where massive forges stand cold and dark, their chimney stacks piercing upward like a forest of iron teeth.",
+  "art_prompt": "Towering cast-iron smokestacks packed dense, deep indigo shadows between silver-grey metal, corroded riveted seams, broken furnace doors gaping black, scattered anvil blocks, chains coiled on ash-grey ground, no sky visible overhead.",
+  "band": "mid",
+  "slug": "the_ironworks_yard"
+ },
+ {
+  "name": "The Legation Hall",
+  "blurb": "A vast columned embassy, its marble floors cracked and dust-thick, where diplomats once bargained before something ended all negotiation.",
+  "art_prompt": "Colonnade receding into shadow, fluted limestone columns olive-drab with age, dead-leaf brown marble flagstones split by widening fissures, barrel-vaulted ceiling webbed with cracks, dust-thick air, abandoned ceremonial alcoves to either side, corroded bronze door frames hanging open.",
+  "band": "mid",
+  "slug": "the_legation_hall"
+ },
+ {
+  "name": "Bleachyard Terraces",
+  "blurb": "Stepped limestone quarries descend in geometric tiers, their pale walls carved by forgotten industry, now silent except for wind that carries the smell of old ash.",
+  "art_prompt": "Stepped limestone terraces pale grey-white, geometric quarry cuts receding toward horizon, exposed strata bands cream and silver, cracked rubble scattered across stepped floors, bone-dust drifts across carved stone faces, wind-eroded ledges sharp and clean, wide open sky above pale ground.",
+  "band": "mid",
+  "slug": "bleachyard_terraces"
+ },
+ {
+  "name": "Furnace Rows",
+  "blurb": "A sprawling foundry district where cast-iron smelters stand shoulder to shoulder, their interior chambers flooded with hardened slag and rust-bright mineral deposits; the air tastes of ancient metal and copper poison.",
+  "art_prompt": "Hundreds of squat cylindrical iron furnaces packed dense, black-orange rust patina, burnt-sienna slag heaps between them, exposed seams of rust-red ore running through charred brick walls, deep shadows pooling between metal drums, oxidized copper deposits bright against darkness.",
+  "band": "mid",
+  "slug": "furnace_rows"
+ },
+ {
+  "name": "Sulfur Yards",
+  "blurb": "A vast industrial plain of fractured yellow earth and collapsed mining works, where toxic fumes rise from deep fissures and rusted extraction machinery lies half-buried in caustic dust.",
+  "art_prompt": "cracked sulfur-yellow ground, deep brown fissures widening, scattered rust-red metal derricks and cable drums, weathered wooden pit-frames tilted and broken, dark brown smoke vents, pale yellow dust drifts, distant brown hills under sallow sky",
+  "band": "mid",
+  "slug": "sulfur_yards"
+ },
+ {
+  "name": "Pillared Deep",
+  "blurb": "A flooded cathedral's crypt, drained long ago, leaving behind a forest of stone supports—some intact, others snapped like frozen bones.",
+  "art_prompt": "Dense forest of fractured limestone columns, pale grey-blue, rising from cracked pale stone floor. Shattered column stumps jagged white, intact pillars receding into cold shadow. Frost-pale mineral deposits webbing dark stone seams between uprights. Broken architrave fragments scattered across pale rubble bed.",
+  "band": "mid",
+  "slug": "pillared_deep"
+ },
+ {
+  "name": "The Gilt Arcade",
+  "blurb": "A merchant's covered bazaar, its vaulted ceiling collapsed in sections, exposing a sky that hasn't moved in centuries. Gold leaf peels from every surface.",
+  "art_prompt": "Barrel-vaulted stone arcade receding into shadow, fractured gilt plaster peeling from arched ribs, amber light catching exposed dark granite blocks, collapsed vault sections revealing blackened stone beyond, rust-stained merchant stalls rotting into dust, warm ochre and deep charcoal, no figures.",
+  "band": "mid",
+  "slug": "the_gilt_arcade"
+ },
+ {
+  "name": "Vermillion Flats",
+  "blurb": "A vast salt plain stained rust-red by mineral springs, checkered with deep fissures that exhale acrid smoke—the drained bed of some ancient alchemical vat.",
+  "art_prompt": "Cracked salt expanse deep crimson, black fissures widening toward horizon, charcoal smoke rising from breaks, blood-red mineral crust, ashen sky above barren cracked ground.",
+  "band": "mid",
+  "slug": "vermillion_flats"
+ },
+ {
+  "name": "Sluicegate District",
+  "blurb": "A drowned merchant quarter where canal-locks have seized open, leaving channels of stagnant water between countless timber-framed warehouse facades that lean and splinter in the damp.",
+  "art_prompt": "Weathered timber warehouse fronts packed dense, grey-green mould blooming on wooden planks, dark water channels between structures, rusted iron lock mechanisms, warped doorframes, algae-slick stone quays, overturned barrel remnants.",
+  "band": "mid",
+  "slug": "sluicegate_district"
+ },
+ {
+  "name": "The Ossuary Galleries",
+  "blurb": "A mortuary temple's endless colonnades, where the dead were arranged in geometric rows and the air tastes of old stone and preserved flesh.",
+  "art_prompt": "Receding marble colonnade, fluted columns alternating black and white, deep shadow-wells between pillars, bone-pale capitals, floor laid in checkerboard obsidian and chalk, funeral alcoves carved into walls, geometric precision crumbling, dust motes catching distant light.",
+  "band": "mid",
+  "slug": "the_ossuary_galleries"
+ },
+ {
+  "name": "Meridian Prison",
+  "blurb": "A fortress of narrow stone cells stacked in towering columns, built to contain something that required more floors than sky.",
+  "art_prompt": "Packed vertical shaft-like stone towers, indigo shadow between silver-grey weathered blocks, narrow slot windows ascending endlessly, deep geometric recesses, austere monolithic architecture, confined vertical geometry, cold mineral palette.",
+  "band": "mid",
+  "slug": "meridian_prison"
+ },
+ {
+  "name": "The Deanery Rows",
+  "blurb": "A vast dormitory complex where robed scholars once slept in ranked cells; now their narrow doors hang open onto corridors choked with papery debris and the scratch of things that nest in darkness.",
+  "art_prompt": "Long corridor lined with hundreds of small wooden doors, olive-drab paint peeling, dead-leaf brown shadows between, scattered parchment fragments on worn stone floor, receding into gloom, arched wooden ceiling ribs fractured and sagging.",
+  "band": "mid",
+  "slug": "the_deanery_rows"
+ },
+ {
+  "name": "Bleached Marshalling Yard",
+  "blurb": "A vast rail depot of the tower's forgotten age, its tracks webbed across pale stone and choked with derailed iron cars, the rails themselves oxidized to ghost-silver.",
+  "art_prompt": "Abandoned railway yard spreading to horizon, parallel rails ivory-white with mineral crust, derailed cast-iron freight cars bone-grey and ash-silver, weathered timber sleepers pale driftwood colour, scattered corroded coupling chains, pale overcast sky dominating upper half.",
+  "band": "mid",
+  "slug": "bleached_marshalling_yard"
+ },
+ {
+  "name": "Smelter's Labyrinth",
+  "blurb": "A maze of defunct copper stills and alchemical retorts, their twisted pipes and bulbous chambers still stained with centuries of caustic residue—a refinery abandoned mid-work, passages choked with corroded metalwork and the acrid ghost of old fires.",
+  "art_prompt": "Hundreds of bulbous copper stills crammed vertical, burnt-orange patina darkening to rust-black, twisted pipe networks threading between them, narrow claustrophobic passages, deep shadows pooling in the dense mass, corroded brass fittings catching dull light, no sky visible, suffocating industrial geometry.",
+  "band": "mid",
+  "slug": "smelter_s_labyrinth"
+ },
+ {
+  "name": "The Colonnade Rot",
+  "blurb": "A grand processional hall where verdigris-crusted bronze columns stand in perfect ranks, their bases sinking into cracked marble as the floor buckles upward in geometric rifts.",
+  "art_prompt": "Weathered bronze columns receding endlessly, deep green patina crusting fluted surfaces, cracked white marble floor warped and fractured, geometric fissures widening between stones, shadowed colonnade narrowing toward distant archway, corroded bronze capitals.",
+  "band": "mid",
+  "slug": "the_colonnade_rot"
+ },
+ {
+  "name": "Candlelight Aisle",
+  "blurb": "A monastic scriptorium frozen mid-work, thousands of wax-sealed manuscripts stacked in towering honeycomb shelves, the air thick with the smell of old tallow and parchment dust.",
+  "art_prompt": "Densely packed vertical shelving of pale bone-white wax tablets and rolled vellum, frost-blue shadows between stacks, guttered candle-stubs pooled in hardened wax residue, pale grey-blue stone walls receding between narrow aisles, cold luminescence from crystallized tallow buildup.",
+  "band": "mid",
+  "slug": "candlelight_aisle"
+ },
+ {
+  "name": "The Amber Scriptorium",
+  "blurb": "A vast library of brass shelving stretches into shadow, its countless scrolls and ledgers still ranked in perfect order—but the air hangs thick with dust, and nothing has turned a page in centuries.",
+  "art_prompt": "Endless brass shelving receding into darkness, warm amber light pooling on metal surfaces, rolled parchment and leather spines ranked tight, deep shadows between towering racks, verdigris patina on bronze frames, ochre dust coating horizontal beams, gold-warm light source distant and narrow.",
+  "band": "mid",
+  "slug": "the_amber_scriptorium"
+ },
+ {
+  "name": "Merchant's Grave",
+  "blurb": "A sprawl of toppled trade-warehouses half-buried in rust-coloured sand, their cargo doors hanging open to reveal nothing but drift and shadow.",
+  "art_prompt": "Weathered brick warehouse hulks tilted and collapsed across rust-red dune, charcoal shadows pooling between fallen walls, scattered wooden beam fragments, pale sky horizon, blood-stained sand rippled by wind.",
+  "band": "mid",
+  "slug": "merchant_s_grave"
+ },
+ {
+  "name": "The Weir Stacks",
+  "blurb": "A forest of stone sluice-gates and lock-mechanisms, half-submerged in ancient channels—the infrastructure of a drowned hydraulic city, now clogged with sediment and the nests of things that hunt in narrow places.",
+  "art_prompt": "Vertical stone gates and timber sluice-frames packed dense, grey-green algae crusting their weathered faces, narrow gaps between them choked with silt-caked debris, sea-green water staining the lower courses, rust-orange iron mechanisms frozen mid-rotation.",
+  "band": "mid",
+  "slug": "the_weir_stacks"
+ },
+ {
+  "name": "The Viaduct Mortuary",
+  "blurb": "A vast stone bridge-cathedral hollowed into nested sepulchers, its vaults stacked ten-high with funerary urns and the air thick with decades of unburned incense.",
+  "art_prompt": "Endless receding arcade of black granite archways, white marble sepulcher niches stacked vertical between pillars, grey ash drifting through pale stone corridors, ochre urns catching rare light on shadowed shelves.",
+  "band": "mid",
+  "slug": "the_viaduct_mortuary"
+ },
+ {
+  "name": "Dusthall Galleries",
+  "blurb": "A vast mortuary museum of fired clay, its thousands of funeral urns arranged in neat rows across a cracked floor, now split open by subsidence and looted by grave-robbers.",
+  "art_prompt": "Terracotta funeral urns arranged in geometric rows across fractured ochre ground, some toppled and shattered, dusty rose sky above, adobe-coloured walls receding, dark gaps where earth has settled and cracked.",
+  "band": "mid",
+  "slug": "dusthall_galleries"
+ },
+ {
+  "name": "The Splintered Meridian",
+  "blurb": "A forest of fractured crystalline shards erupts from reality itself, each shard a different moment frozen mid-collapse.",
+  "art_prompt": "Jagged crystalline spires densely packed, deep indigo and silver, reality fracturing between them, void-light bleeding through fissures, impossible geometry crystallized solid.",
+  "band": "high",
+  "slug": "the_splintered_meridian"
+ },
+ {
+  "name": "Pale Scar",
+  "blurb": "A vast plain of fractured chalk and bleached bone-dust where reality splits open—the horizon itself tears into jagged fissures that leak colourless light from the void beyond.",
+  "art_prompt": "Cracked chalk flats stretching to horizon, bone-white ground splintering into geometric crevasses, pale grey fissures widening where the earth has torn, colourless void-light bleeding upward from the ruptures, no vegetation, no water, only fractured pale ground meeting colourless sky.",
+  "band": "high",
+  "slug": "pale_scar"
+ },
+ {
+  "name": "Ember Stacks",
+  "blurb": "A forest of collapsed furnace towers, their iron frames still radiating heat, leaning into each other as reality warps the space between them into impossible angles.",
+  "art_prompt": "Vertical rusted iron furnace chimneys densely packed, leaning inward, burnt-orange metal darkening to black char, gaps between narrowing toward impossible geometry, heat-shimmer distorting distant stacks into fractal repetition.",
+  "band": "high",
+  "slug": "ember_stacks"
+ },
+ {
+  "name": "The Verdant Colonnade",
+  "blurb": "A mile-long gallery of oxidized bronze pillars leans inward as reality warps, their green patina deepening toward a light that should not exist.",
+  "art_prompt": "Weathered bronze columns receding endlessly with deep verdigris patina, fluted surfaces crusted green, impossibly converging perspective, geometric voids between pillars, sickly radiance pooling ahead, reality fracturing at the vanishing point",
+  "band": "high",
+  "slug": "the_verdant_colonnade"
+ },
+ {
+  "name": "The Sundered Flats",
+  "blurb": "A vast expanse where the tower's foundation has cracked open—reality splits into jagged chasms of yellow stone and dark void, the ground itself collapsing into impossible angles.",
+  "art_prompt": "Fractured earth splitting into deep crevasses, sulphur-yellow stone walls, dark brown soil exposed in geometric rifts, chunks tilted at wrong angles, pale fissures glowing faintly against darkness, horizon warped and broken",
+  "band": "high",
+  "slug": "the_sundered_flats"
+ },
+ {
+  "name": "Shattered Meridian",
+  "blurb": "A lattice of fractured ice-spires juts from a void-scarred plain, each shard humming with the sound of breaking reality.",
+  "art_prompt": "Densely packed jagged ice-spires pale blue and white, fracturing upward from cracked ground, violet fissures splitting earth between them, no sky visible above—only void.",
+  "band": "high",
+  "slug": "shattered_meridian"
+ },
+ {
+  "name": "The Unraveling Vault",
+  "blurb": "A collapsing treasury where reality fractures between toppling gold-laden shelves, and the very air bleeds into geometries that should not exist.",
+  "art_prompt": "Receding interior of towering golden shelves listing inward, coins and ingots spilling across obsidian floor, dark stone archways fractured mid-span, violet void bleeding through broken masonry, warm amber light fractured by impossible angles.",
+  "band": "high",
+  "slug": "the_unraveling_vault"
+ },
+ {
+  "name": "Scar Expanse",
+  "blurb": "A wasteland where the tower's outer shell has split open, exposing a geography of charred earth and bleeding sky—reality frays at the edges here, and the ground itself refuses to settle.",
+  "art_prompt": "Vast cracked earth splitting into deep ravines, charcoal soil and blood-red stone, jagged fissures widening toward horizon, violet light bleeding through ruptures in sky above, ash drifts collecting in crevasses, reality visibly deteriorating at the seams.",
+  "band": "high",
+  "slug": "scar_expanse"
+ },
+ {
+  "name": "The Drowned Spinnery",
+  "blurb": "A forest of rotted wooden looms stands half-submerged in stagnant grey water, their tangled frames blocking passage like a drowning man's grip.",
+  "art_prompt": "Waterlogged wooden loom frames densely packed vertical, grey-green algae coating every beam, murky stagnant water pooling between splintered timber, sea-green rot spreading across collapsed shuttle mechanisms, pale sky visible between maze of weathered posts.",
+  "band": "high",
+  "slug": "the_drowned_spinnery"
+ },
+ {
+  "name": "Throne of Fractured Hours",
+  "blurb": "A colossal hall where time itself has shattered into geometric pieces, leaving behind a monument to something that was never meant to exist.",
+  "art_prompt": "vast receding chamber, monolithic white pillars splitting vertically into impossible angles, black marble floor fractured into geometric shards, pale void-light bleeding through ruptures in the ceiling, reality warped and tilted",
+  "band": "high",
+  "slug": "throne_of_fractured_hours"
+ },
+ {
+  "name": "Silt Severance",
+  "blurb": "A vast plain of cracked desiccated earth, its fissures widening into chasms where reality visibly thins—the sky above ripples like disturbed water.",
+  "art_prompt": "Fractured terracotta ground splitting into deep ravines, dusty rose sky warping at horizon, reality tearing, desiccated earth ochre and rust-red, fissures releasing pale violet light from beneath.",
+  "band": "high",
+  "slug": "silt_severance"
+ },
+ {
+  "name": "Starfall Breach",
+  "blurb": "Where the tower's skin split open, reality pours inward as falling stars that never land, crystallizing into jagged spears across dead ground.",
+  "art_prompt": "Indigo void-rupture overhead, silver meteoric fragments suspended mid-fall, dense field of crystalline shards jutting upright from cracked earth, deep blue-black stone fractured radiating outward, starlight refracted cold through translucent spires.",
+  "band": "high",
+  "slug": "starfall_breach"
+ },
+ {
+  "name": "The Voided Colonnade",
+  "blurb": "A great hall where the walls have begun to unmake themselves, leaving only the memory of stone and the hunger of the void pressing inward.",
+  "art_prompt": "receding hall with fluted columns crumbling into negative space, olive-drab plaster peeling to expose nothing, dead-leaf shadows pooling between supports, violet fissures spreading like cracks through absent architecture",
+  "band": "high",
+  "slug": "the_voided_colonnade"
+ },
+ {
+  "name": "Pallid Severance",
+  "blurb": "A vast plain of cracked white stone where reality has split apart—the sky above fractures into geometric shards, and the horizon warps into impossible angles.",
+  "art_prompt": "Endless cracked pale-grey flats, deep fissures splitting white stone, bone-coloured dust rising, warped sky overhead fracturing into angular voids, reality visibly tearing at the horizon line",
+  "band": "high",
+  "slug": "pallid_severance"
+ },
+ {
+  "name": "Pyre Thicket",
+  "blurb": "A forest of blackened timber burnt to charcoal, still smoldering—the trees grew wrong after the fire, twisted and densely packed, leaving only razor-thin gaps between them.",
+  "art_prompt": "Charred skeletal trunks densely packed, burnt-orange embers glowing in deep fissures between black wood, rust-red ash drifts, heat-warped bark curling inward, no sky visible overhead.",
+  "band": "high",
+  "slug": "pyre_thicket"
+ },
+ {
+  "name": "The Verdigrised Nave",
+  "blurb": "A cathedral of corroded bronze pillars stretches into impossible distance, their green-patina surfaces weeping verdigris that pools in geometric cracks—reality here has worn through to something older underneath.",
+  "art_prompt": "Receding nave of towering bronze columns, deep verdigris patina crusting fluted surfaces, green oxidation dripping into fractured floor, bronze capitals listing at wrong angles, distance fading into tarnished haze, no figures.",
+  "band": "high",
+  "slug": "the_verdigrised_nave"
+ },
+ {
+  "name": "Scald Flats",
+  "blurb": "A vast plain of cracked earth bleeding steam from fissures that glow with geothermal light, where reality warps at the horizon and the air itself tastes of sulfur and ash.",
+  "art_prompt": "Endless cracked earth floor splitting into steaming fissures, sulphur-yellow stone walls rising at horizon, dark brown soil, geothermal glow from cracks, warped reality distorting the far sky, abandoned and hostile emptiness.",
+  "band": "high",
+  "slug": "scald_flats"
+ },
+ {
+  "name": "Ashfall Terraces",
+  "blurb": "Stepped platforms of compacted volcanic waste descend into heat-warped distance, where buried foundry-bells toll without striker or wind.",
+  "art_prompt": "Tiered earthen platforms, sulphur-yellow ash drifts between dark-brown stone ledges, cracked stepped terrain receding to warped horizon, heat-shimmer rising from fissures, no sky detail",
+  "band": "mid",
+  "slug": "ashfall_terraces"
+ },
+ {
+  "name": "Alabaster Yards",
+  "blurb": "A sprawling quarry of pale stone blocks and rubble where something was carved away, then left to crack and settle under its own weight.",
+  "art_prompt": "Vast pale-grey quarry floor scattered with massive cream-coloured stone blocks, deep regular fissures splitting white stone, receding geometric pit walls, bone-white dust drifts between stepped platforms, colorless sky meeting horizon.",
+  "band": "mid",
+  "slug": "alabaster_yards"
+ },
+ {
+  "name": "Rust Stacks",
+  "blurb": "A collapsed ironworks where corroded furnace towers have toppled across one another, creating a maze of jagged metal and rust-choked passages that bleed orange dust with each step.",
+  "art_prompt": "Toppled cast-iron furnace stacks densely interlocked, burnt-orange rust scaling black metal, narrow gaps between oxidized pipes, rust-red earth floor scattered with corroded ingots and broken grates, deep orange patina crusting vertical surfaces, fractured industrial geometry.",
+  "band": "mid",
+  "slug": "rust_stacks"
+ },
+ {
+  "name": "Cloister Verdant",
+  "blurb": "A monastic courtyard overtaken by copper-stained water channels and oxidized bronze arcades, where the air tastes of metal and neglect.",
+  "art_prompt": "Weathered bronze arcade receding into distance, fluted columns thick with green verdigris patina, cracked flagstone floor, copper-oxide runoff staining pale stone, oxidized gutters dripping verdant residue, arched vaults above darkening toward depth.",
+  "band": "mid",
+  "slug": "cloister_verdant"
+ },
+ {
+  "name": "Caldera Severance",
+  "blurb": "A vast circular chasm where the tower's foundation cracked open, revealing layers of dead world stacked like broken pottery—each stratum a different era, none of them habitable.",
+  "art_prompt": "sulphur-yellow escarpment walls rising sheer, dark-brown fractured ledges stepping down into fissures, burnt-sienna dust suspended mid-air between stone tiers, impossible geometry where earth planes meet at wrong angles",
+  "band": "high",
+  "slug": "caldera_severance"
+ }
+]

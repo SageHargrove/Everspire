@@ -1,4 +1,4 @@
-# Everspire
+# Giltgrave
 
 A roguelike tower-climbing gacha RPG. You are the manager. Heroes die permanently.
 
@@ -13,17 +13,17 @@ positioning, gear, class synergy, morale, and a hero's personality (their
 
 **To play (no Python, no coding, nothing to configure):**
 
-1. Download **`Everspire-Setup.exe`** from the [Releases](../../releases) page.
+1. Download **`Giltgrave-Setup.exe`** from the [Releases](../../releases) page.
 2. Run it. Windows will warn that it's unsigned: **More info → Run anyway**.
    (Signing costs a few hundred a year; this is a playtest.) It installs
    per-user — **no admin rights, no UAC prompt** — and makes Start Menu and
    desktop shortcuts.
-3. Launch **Everspire** from the Start Menu or desktop.
+3. Launch **Giltgrave** from the Start Menu or desktop.
 4. At the title screen, **make an account** — please use a **throwaway
    password**, not one you use elsewhere. Multiplayer connects automatically.
 
-There's also a plain **`Everspire-playtest.zip`** if you'd rather not install
-anything: extract the whole folder and run `Everspire.exe` from inside it.
+There's also a plain **`Giltgrave-playtest.zip`** if you'd rather not install
+anything: extract the whole folder and run `Giltgrave.exe` from inside it.
 
 That's it. You play on the built-in art, and everyone shares one world server.
 
@@ -52,19 +52,19 @@ those two; everything else is replaceable.
 
 ```bash
 cd frontend && npm run build && cd ..                      # UI must be current
-backend\venv\Scripts\python -m PyInstaller Everspire.spec --noconfirm
+backend\venv\Scripts\python -m PyInstaller Giltgrave.spec --noconfirm
 backend\venv\Scripts\python tools\make_release.py          # -> stage + .zip
 "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" tools\everspire.iss   # -> Setup.exe
 ```
 
-That produces `release/Everspire/` (~1.1GB), `release/Everspire-playtest.zip`
-(993MB) and `release/Everspire-Setup.exe` (923MB) — upload the last two to the
+That produces `release/Giltgrave/` (~1.1GB), `release/Giltgrave-playtest.zip`
+(993MB) and `release/Giltgrave-Setup.exe` (923MB) — upload the last two to the
 Releases page. Note the **module form** (`python -m PyInstaller`) — the
 `pyinstaller.exe` shim in the venv hardcodes the pre-rename interpreter path and
 fails silently with exit 1.
 
 The installer is **per-user by design** (`PrivilegesRequired=lowest`,
-`{autopf}` → `%LOCALAPPDATA%\Programs\Everspire`). That's not just to dodge the
+`{autopf}` → `%LOCALAPPDATA%\Programs\Giltgrave`). That's not just to dodge the
 UAC prompt: the game keeps saves and generated portraits *next to itself*, and
 a Program Files install would put those in a directory the player can't write
 to. Uninstalling removes everything the installer laid down and deliberately
@@ -73,7 +73,7 @@ leaves save data behind, so reinstalling picks a roster back up.
 Two deliberate choices in that layout:
 
 - **The exe stays small (~160MB) and game content sits *beside* it**, not frozen
-  inside. That's what makes an update a drop-in replace of `Everspire.exe` +
+  inside. That's what makes an update a drop-in replace of `Giltgrave.exe` +
   `_internal/` while a player's saves and generated portraits survive.
 - **`make_release.py` picks backend files via `git ls-files`**, so gitignored
   things — `backend/.env` above all — cannot reach a release by accident. It
@@ -82,7 +82,7 @@ Two deliberate choices in that layout:
 
 Because the backend is loaded as loose source rather than frozen, PyInstaller
 can't see its imports: every third-party module it touches is declared by hand
-in `Everspire.spec`. A `ModuleNotFoundError` in the packaged build almost always
+in `Giltgrave.spec`. A `ModuleNotFoundError` in the packaged build almost always
 means adding a package there — `collect_submodules`, not a bare name, for
 anything imported as `pkg.sub`.
 
@@ -250,8 +250,8 @@ cd arena_server && python test_security.py
 
 ```
 app_launcher.py               # The launcher — dev mode (subprocess) + frozen mode (in-process)
-Everspire.spec                # PyInstaller onedir build; deps declared by hand
-tools/make_release.py         # Assembles + zips release/Everspire/ for the Releases page
+Giltgrave.spec                    # PyInstaller onedir build; deps declared by hand
+tools/make_release.py         # Assembles + zips release/Giltgrave/ for the Releases page
 PLAY.bat                      # Bare-bones path — venv bootstrap + game at localhost:8000
 INSTALL_GENERATION.bat        # Optional: local AI hero generation (NVIDIA GPU)
 generation/loras/             # Hero style models (git LFS) pulled by the installer

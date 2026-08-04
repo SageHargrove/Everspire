@@ -35,12 +35,28 @@ const VIOLET = a => `rgba(150,110,230,${a})`
 //   starfield     — no shapes at all, just a denser sparkle scatter
 //   constellation — sparkle clusters joined by faint hairlines
 //   pips          — tiny filled diamond pips (brand-mark motif), no outlines
+//   watermark     — one enormous ghost outline WORD per screen, bled off the
+//                   bottom-right (same stroke language as the title stacks and
+//                   the summon gate's 7/Z watermark)
+//   rings         — concentric nested-diamond rings anchored in the dead
+//                   corners; the gate's ring motif as page furniture
 export const BG_VARIANTS = [
   ['manuscript', 'MANUSCRIPT'],
   ['starfield', 'STARFIELD'],
   ['constellation', 'CONSTELLATION'],
   ['pips', 'PIPS'],
+  ['watermark', 'WATERMARK'],
+  ['rings', 'RINGS'],
 ]
+
+// The ghost word each screen carries. Echoes the word already sitting behind
+// that page's own title stack (ROSTER over LEGION, VAULT over ARSENAL…), so
+// the watermark reads as the same voice rather than a new label.
+const WATERMARK_WORDS = {
+  summon: 'GATE', heroes: 'LEGION', inventory: 'ARSENAL', tower: 'ASCENT',
+  arena: 'WORLD', achievements: 'DEEDS', base: 'HAVEN', more: 'ARCHIVE',
+  log: 'CHRONICLE',
+}
 
 export default function Ornaments({ seed = 'page', variant = 'manuscript' }) {
   const bits = useMemo(() => {
@@ -59,6 +75,7 @@ export default function Ornaments({ seed = 'page', variant = 'manuscript' }) {
     })
 
     let diamonds = [], squares = [], pips = [], constellations = []
+    let watermark = null, ringSets = []
     let sparkCount = 4
     let lineCount = 1 + Math.floor(r() * 2)
 
@@ -95,11 +112,33 @@ export default function Ornaments({ seed = 'page', variant = 'manuscript' }) {
         ...spread(), size: Math.round(4 + r() * 6),
         color: (r() < 0.5 ? GOLD : VIOLET)(0.14 + r() * 0.12),
       }))
+    } else if (variant === 'watermark') {
+      // One huge stroked word sitting in the BOTTOM BAND. That band is the
+      // only region empty on every screen — the vault/base/social pages all
+      // carry a full-height panel on the right, so a corner-anchored mark
+      // just hides behind it. Stroke-only, so it can't fight the wash.
+      sparkCount = 5
+      watermark = { word: WATERMARK_WORDS[seed] || 'GILTGRAVE', size: 210 }
+    } else if (variant === 'rings') {
+      // A horizon of nested-diamond arcs rising out of the bottom edge —
+      // one great crown flanked by two satellites, all anchored below 100%
+      // so only their upper arcs show. Reads as a fragment of something
+      // larger under the floor rather than a logo dropped on the page.
+      sparkCount = 5
+      lineCount = 1
+      // Alpha runs well above the manuscript diamonds' 0.05-0.09: those sit
+      // mid-canvas where the violet bloom lifts them, while these arcs cross
+      // the darkest part of the page gradient and vanish at that alpha.
+      ringSets = [
+        { left: '50%', top: '117%', size: 1120, rings: 5, pip: false, color: GOLD(0.26) },
+        { left: '15%', top: '112%', size: 440, rings: 3, pip: false, color: VIOLET(0.24) },
+        { left: '85%', top: '112%', size: 440, rings: 3, pip: false, color: VIOLET(0.24) },
+      ]
     }
 
     const sparks = Array.from({ length: sparkCount }, mkSpark)
     const lines = Array.from({ length: lineCount }, mkLine)
-    return { diamonds, squares, pips, constellations, sparks, lines }
+    return { diamonds, squares, pips, constellations, sparks, lines, watermark, ringSets }
   }, [seed, variant])
 
   return (
@@ -109,6 +148,34 @@ export default function Ornaments({ seed = 'page', variant = 'manuscript' }) {
         position: 'absolute', inset: 0,
         background: 'repeating-linear-gradient(64deg, rgba(184,151,98,.028) 0 1px, transparent 1px 190px)',
       }} />
+      {/* enormous ghost word across the bottom band */}
+      {bits.watermark && (
+        <div style={{
+          position: 'absolute', left: '50%', bottom: 54, transform: 'translateX(-50%)',
+          fontFamily: "'Cinzel', serif", fontWeight: 900,
+          fontSize: bits.watermark.size, lineHeight: 0.78, letterSpacing: '0.16em',
+          color: 'transparent', WebkitTextStroke: '1px rgba(150,110,230,.17)',
+          whiteSpace: 'nowrap', userSelect: 'none',
+        }}>{bits.watermark.word}</div>
+      )}
+      {/* concentric nested-diamond rings */}
+      {bits.ringSets.map((rs, i) => (
+        <div key={`rg${i}`} style={{
+          position: 'absolute', left: rs.left, top: rs.top,
+          width: rs.size, height: rs.size,
+          transform: 'translate(-50%,-50%) rotate(45deg)',
+        }}>
+          {Array.from({ length: rs.rings }).map((_, k) => (
+            <div key={k} style={{ position: 'absolute', inset: Math.round(rs.size * 0.115 * k), border: `1px solid ${rs.color}` }} />
+          ))}
+          {rs.pip && (
+            <div style={{
+              position: 'absolute', left: '50%', top: '50%', width: 12, height: 12,
+              transform: 'translate(-50%,-50%)', background: rs.color,
+            }} />
+          )}
+        </div>
+      ))}
       {/* rotated diamond outlines */}
       {bits.diamonds.map((d, i) => (
         <div key={`d${i}`} style={{ position: 'absolute', left: d.left, top: d.top, width: d.size, height: d.size, transform: 'rotate(45deg)', border: `1px solid ${d.color}` }}>

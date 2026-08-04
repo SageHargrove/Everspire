@@ -1,16 +1,16 @@
-"""Assemble the shippable Everspire folder (and zip) from a PyInstaller build.
+"""Assemble the shippable Giltgrave folder (and zip) from a PyInstaller build.
 
-    backend\\venv\\Scripts\\pyinstaller Everspire.spec --noconfirm
+    backend\\venv\\Scripts\\pyinstaller Giltgrave.spec --noconfirm
     backend\\venv\\Scripts\\python tools\\make_release.py
 
-Produces release/Everspire/ and release/Everspire-<stamp>.zip — upload the zip
+Produces release/Giltgrave/ and release/Giltgrave-<stamp>.zip — upload the zip
 to GitHub Releases. Do NOT ship the repo zip: .git is 2.2GB, and the working
 tree carries ~3.2GB of curation art nobody playing needs.
 
 Layout produced:
 
-    Everspire/
-      Everspire.exe          the launcher
+    Giltgrave/
+      Giltgrave.exe              the launcher
       _internal/             PyInstaller runtime + deps   \\  replaced on update
       backend/               game code + static art + saves/  <- saves KEPT
       frontend/dist/         built UI
@@ -34,9 +34,9 @@ import sys
 import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BUILD_DIR = os.path.join(ROOT, "dist", "Everspire")     # PyInstaller onedir output
+BUILD_DIR = os.path.join(ROOT, "dist", "Giltgrave")     # PyInstaller onedir output
 RELEASE_DIR = os.path.join(ROOT, "release")
-STAGE_DIR = os.path.join(RELEASE_DIR, "Everspire")
+STAGE_DIR = os.path.join(RELEASE_DIR, "Giltgrave")
 
 # Copied wholesale from the working tree. frontend/dist is build output (we
 # want what was just built, not what git has). comfy_nodes is untracked but
@@ -60,7 +60,7 @@ README_FIRST = """EVERSPIRE — playtest build
 
 TO PLAY
 -------
-Double-click Everspire.exe.
+Double-click Giltgrave.exe.
 
 Windows will probably show a blue "Windows protected your PC" box, because
 this build isn't code-signed (a signing certificate costs a few hundred
@@ -114,7 +114,7 @@ TROUBLESHOOTING
 Window opens blank/white    Give it a moment on first launch. If it persists,
                             close it and reopen.
 Nothing happens at all      Another copy may already be running — check the
-                            taskbar, and Task Manager for Everspire.exe.
+                            taskbar, and Task Manager for Giltgrave.exe.
 Generated heroes have       The cutout step didn't finish installing. Settings
 ragged/blocky backgrounds   -> AI will say so; turn "Hero Portrait Generation"
                             off and on again to retry just that part.
@@ -185,10 +185,10 @@ def main():
     args = ap.parse_args()
 
     # ── preflight ───────────────────────────────────────────────────────────
-    exe = os.path.join(BUILD_DIR, "Everspire.exe")
+    exe = os.path.join(BUILD_DIR, "Giltgrave.exe")
     if not os.path.isfile(exe):
         sys.exit(f"No PyInstaller build at {exe}\n"
-                 f"Run:  backend\\venv\\Scripts\\pyinstaller Everspire.spec --noconfirm")
+                 f"Run:  backend\\venv\\Scripts\\pyinstaller Giltgrave.spec --noconfirm")
     if not os.path.isfile(os.path.join(ROOT, "frontend", "dist", "index.html")):
         sys.exit("frontend/dist/index.html missing — run `npm run build` in frontend/ first.")
 
@@ -250,13 +250,13 @@ def main():
     # compressed and will not shrink no matter how long we spend on them. Level
     # 1 still meaningfully shrinks the .py/.js/.dll side at a fraction of the
     # wall time — level 9 on ~900MB is a coffee break for a few extra MB.
-    zip_path = os.path.join(RELEASE_DIR, f"Everspire-{args.tag}.zip")
+    zip_path = os.path.join(RELEASE_DIR, f"Giltgrave-{args.tag}.zip")
     print(f"Zipping -> {zip_path} (this takes a few minutes)")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=1) as z:
         for root, _, files in os.walk(STAGE_DIR):
             for name in files:
                 full = os.path.join(root, name)
-                z.write(full, os.path.join("Everspire", os.path.relpath(full, STAGE_DIR)))
+                z.write(full, os.path.join("Giltgrave", os.path.relpath(full, STAGE_DIR)))
 
     print(f"\nDone.  {zip_path}  ({human(os.path.getsize(zip_path))})")
     print("Upload that to GitHub Releases — it's over the 100MB limit for repo files,")

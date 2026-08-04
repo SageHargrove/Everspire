@@ -37,6 +37,18 @@ import numpy as np
 from PIL import Image
 
 SEG_MODEL = "isnet-anime"
+# Beasts get a GENERAL segmenter, not the anime-character one.
+#
+# isnet-anime is trained on anime CHARACTERS. On a spider, a dragon or a dire
+# wolf it returns almost nothing, the union falls through to the border flood,
+# and the flood then eats every dark region it can reach — which is why dark
+# monsters came back with their bodies half dissolved while bright parts (red
+# wings, pale fangs) survived. It looked like a flood bug; it was the wrong
+# model for the subject.
+#
+# isnet-general-use is the same architecture trained on general objects, so it
+# holds a beast's silhouette without needing a face to latch onto.
+SEG_MODEL_BEAST = "isnet-general-use"
 
 # Pixels at or below this are "the void" for connectivity purposes.
 VOID_THRESH = 22
@@ -50,7 +62,7 @@ VOID_BORDER_MAX = 24
 # detached bright extras: sparks, aura, ground glow, blade shine.
 FLOOD_MIN_BRIGHT = 45
 
-_SESSION = None
+_SESSIONS = {}
 
 
 class SegmenterUnavailable(RuntimeError):
@@ -63,12 +75,13 @@ class SegmenterUnavailable(RuntimeError):
     into one `None` silently disabled that fallback."""
 
 
-def _session():
-    global _SESSION
-    if _SESSION is None:
+def _session(model=SEG_MODEL):
+    """Cached per model — both get used in one run, and building an onnx
+    session costs seconds, so a single global would thrash between them."""
+    if model not in _SESSIONS:
         from rembg import new_session
-        _SESSION = new_session(SEG_MODEL)
-    return _SESSION
+        _SESSIONS[model] = new_session(model)
+    return _SESSIONS[model]
 
 
 def _scipy():
@@ -115,9 +128,15 @@ def trim_rgba(arr: np.ndarray, margin_frac: float = 0.05) -> np.ndarray:
                max(xs.min() - m, 0):min(xs.max() + 1 + m, w)]
 
 
-def cutout_rgba(pil_rgb: Image.Image, trim: bool = True) -> Image.Image | None:
+def cutout_rgba(pil_rgb: Image.Image, trim: bool = True,
+                beast: bool = False) -> Image.Image | None:
     """Cut one portrait. Returns RGBA, or None when the result fails the sanity
     gate (caller should fall back rather than ship a broken cut).
+
+    Pass beast=True for anything that is not a person-shaped character. It
+    swaps in a general-purpose segmenter; see SEG_MODEL_BEAST above for why
+    that matters (the anime model finds nothing on a spider, and the fallback
+    flood then dissolves the body).
 
     Never raises for a missing optional dependency: without scipy it degrades to
     segmentation alone, which is still far better than any flood."""
@@ -128,7 +147,8 @@ def cutout_rgba(pil_rgb: Image.Image, trim: bool = True) -> Image.Image | None:
         raise SegmenterUnavailable(str(e)) from e
     try:
         seg_a = np.asarray(
-            remove(pil_rgb.convert("RGB"), session=_session(),
+            remove(pil_rgb.convert("RGB"),
+                   session=_session(SEG_MODEL_BEAST if beast else SEG_MODEL),
                    post_process_mask=True).convert("RGBA")
         )[:, :, 3]
     except Exception as e:
@@ -197,11 +217,12 @@ def main(argv):
     all necessarily has ComfyUI, whose python does have rembg. Shelling out
     there gives a player the identical cutout without adding a byte to the
     download. Exit 0 on success, 1 if the sanity gate rejected it."""
-    if len(argv) != 3:
-        print("usage: cutout.py <in.png> <out.png>")
+    if len(argv) not in (3, 4):
+        print("usage: cutout.py <in.png> <out.png> [--beast]")
         return 2
     try:
-        rgba = cutout_rgba(Image.open(argv[1]).convert("RGB"))
+        rgba = cutout_rgba(Image.open(argv[1]).convert("RGB"),
+                           beast="--beast" in argv)
     except SegmenterUnavailable as e:
         print(f"segmenter unavailable: {e}")
         return 3
