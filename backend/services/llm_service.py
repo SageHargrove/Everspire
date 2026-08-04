@@ -338,6 +338,63 @@ Respond with only the zone name and description."""
     except Exception:
         return "The Dark Unknown: Shadows obscure the path ahead."
 
+ZONE_BANDS = {
+    "low":  "floors 1-30. Approachable and survivable, but wrong. Natural or "
+            "lightly built: caves, marshes, wastes, quarries, overgrown ruins.",
+    "mid":  "floors 31-70. Built by someone, then abandoned or defiled. "
+            "Fortresses, cathedrals, foundries, drowned cities, catacombs.",
+    "high": "floors 71+. Apocalyptic or unreal. Reality is visibly failing: "
+            "voids, impossible geometry, dead titans, seas of fire.",
+}
+
+
+def generate_zone(band: str = "low", avoid_names: list = None) -> dict:
+    """Invent one tower zone: its name, its blurb, and the art prompt for it.
+
+    ONE generator for both uses. The shipped zone library is built by calling
+    this offline, and a player with generation on calls the same function for
+    their own tower — so base-case zones and generated ones come from the same
+    place and cannot drift apart in tone. Same reasoning as heroes, where the
+    LLM writes portrait_prompt for both paths.
+
+    art_prompt is deliberately long. A short scene line loses to a style LoRA's
+    prior — measured repeatedly: "a windswept upland waste" rendered as a dark
+    cave, while a paragraph naming ground cover, structures, sky and light
+    direction rendered the actual place. Enumerate concrete nouns, state what
+    the light is doing, and say outright when the sky is open."""
+    avoid = ""
+    if avoid_names:
+        avoid = ("\nDo NOT reuse or closely echo any of these existing zone names: "
+                 + ", ".join(avoid_names[-60:]) + ".")
+    prompt = f"""Invent one zone of a dark fantasy tower that heroes climb.
+
+This zone sits in the {band.upper()} band: {ZONE_BANDS.get(band, ZONE_BANDS['low'])}{avoid}
+
+Return ONLY valid JSON:
+{{
+  "name": "2-4 words, evocative, no colon. Not 'The Dark X' or 'X of Shadows'.",
+  "blurb": "One sentence a player reads on the zone tile. Concrete, grim, hints at what lives there.",
+  "art_prompt": "60-90 words describing ONLY what a painting of this place shows."
+}}
+
+Rules for art_prompt, all load-bearing:
+- Name concrete nouns: what the ground is, what structures stand, what the sky does.
+- State the light source and its direction explicitly.
+- If the sky is open, SAY "open sky, no ceiling". If enclosed, say what the ceiling is.
+- Vary the shot: some zones are wide horizontal vistas, some look down into a
+  pit, some are tight interiors, some are distant silhouettes across water.
+  Do not default to a vertical corridor with a glow at the end.
+- NO people, NO creatures, NO characters. Empty scenery only.
+- No lighting adjectives without a source ("atmospheric", "moody") - say what
+  is emitting the light."""
+    raw = _generate_with_claude_fallback(prompt, max_tokens=600, temperature=1.0)
+    data = json.loads(_clean_json(raw))
+    return {"name": data["name"].strip(),
+            "blurb": data["blurb"].strip(),
+            "art_prompt": data["art_prompt"].strip(),
+            "band": band}
+
+
 def generate_hero_reaction(hero_name: str, hero_personality: str, event_type: str) -> str:
     """Generate a 1-sentence hero reaction to a game event."""
     event_prompts = {
