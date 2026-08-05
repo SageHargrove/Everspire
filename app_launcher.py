@@ -33,6 +33,39 @@ import urllib.request
 
 IS_FROZEN = getattr(sys, "frozen", False)
 
+
+def _repair_stdio():
+    """A windowed PyInstaller build has NO stdout/stderr — they are None.
+
+    That is not cosmetic. uvicorn's log formatter calls `sys.stdout.isatty()`
+    while configuring logging, so starting the backend died before it ever
+    bound a port:
+
+        AttributeError: 'NoneType' object has no attribute 'isatty'
+        ValueError: Unable to configure formatter 'default'
+
+    and any bare print() in this file would raise the same way. Point both
+    streams at a log file next to the exe so the crash can't happen and a
+    player who hits a problem has something to send. Falls back to devnull if
+    the install dir isn't writable (e.g. Program Files).
+    """
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+    stream = None
+    try:
+        log_path = os.path.join(get_base_dir(), "giltgrave-launcher.log")
+        stream = open(log_path, "a", buffering=1, encoding="utf-8", errors="replace")
+    except OSError:
+        try:
+            stream = open(os.devnull, "w")
+        except OSError:
+            return
+    if sys.stdout is None:
+        sys.stdout = stream
+    if sys.stderr is None:
+        sys.stderr = stream
+
+
 HOST = "127.0.0.1"
 PORT = 8000
 # localhost (not 127.0.0.1) because backend/main.py's origin allowlist and the
@@ -278,6 +311,9 @@ def open_window(icon_path):
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
+    # Must run before ANY print() or before uvicorn configures logging:
+    # a windowed build has no stdout and both would crash. See _repair_stdio.
+    _repair_stdio()
 
     if not _acquire_single_instance_lock():
         print("Another instance of Giltgrave is already running. Exiting.")
