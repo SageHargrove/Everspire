@@ -1,0 +1,38 @@
+[
+ {
+  "name": "Bone Quarry",
+  "blurb": "An open pit of bleached earth where something vast was dismantled, stone tools scattered between ribs large as archways.",
+  "art_prompt": "Massive ivory bones jutting from rust-red clay. Bone-white ribs curved like cathedral arches. Black basalt tool-marks scarring pale surfaces. Dust-choked air. No sky.",
+  "band": "low"
+ },
+ {
+  "name": "Brackwater Fen",
+  "blurb": "A vast marsh of rust-colored water and sunken timber where the air itself tastes of copper and decay.",
+  "art_prompt": "Rust-red water stretching flat, half-submerged tree trunks skeletal and black, silt banks ochre and cracked, brackish vapor rising, distant limestone ridges bone-pale and featureless.",
+  "band": "low"
+ },
+ {
+  "name": "Corroded Meridian",
+  "blurb": "A vast clockwork observatory where brass gears the size of keeps have seized and split, leaking caustic fluids that pool in geometric basins and eat through stone.",
+  "art_prompt": "Massive interlocking brass gears, some fractured and weeping rust-red liquid. Geometric stone channels carved into floor. Verdigris-stained copper domes, one collapsed. Pools of luminous amber acid reflecting broken astrolabes and calibration rods.",
+  "band": "mid"
+ },
+ {
+  "name": "The Molten Vein",
+  "blurb": "A collapsed forge-temple where magma still flows through cracked marble halls, and the air shimmers with heat that warps sound itself.",
+  "art_prompt": "Fractured white and grey marble columns half-submerged in rust-orange magma. Black obsidian slag heaped against golden-veined stone. Thermal shimmer rising from lava channels carved deep into the floor. Charred wooden beams jutting from rubble. The colour of old blood in shadow where magma-light doesn't reach.",
+  "band": "mid"
+ },
+ {
+  "name": "Riftwound Expanse",
+  "blurb": "A vast plateau where reality has split open—jagged chasms leak radiant void-light, and the sky hangs in fractured plates like a shattered mirror.",
+  "art_prompt": "Fractured obsidian plateaus, violet void-fissures splitting earth, floating geometric shards of stone suspended in sickly green light, edges crumbling into absolute darkness, no horizon.",
+  "band": "high"
+ },
+ {
+  "name": "Shattered Meridian",
+  "blurb": "A vast clockwork mechanism lies broken across impossible angles, its gears frozen mid-turn as reality splinters around them.",
+  "art_prompt": "Colossal brass gears tilted at wrong angles, some half-phased into void. Rust-red oil pooling on obsidian. Fractured sky bleeding sickly amber. Shattered bronze plates. Black fissures in the metal floor spreading outward.",
+  "band": "high"
+ }
+]

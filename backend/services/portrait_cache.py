@@ -108,8 +108,15 @@ HERO_LORA = os.getenv("COMFY_LORA_HERO", (
     "Everspire_Heroes_v1.safetensors:0.75,"
     "AddMicroDetails_NoobAI_v5.safetensors:0.3"
 ))
+# v2 adopted 2026-08-04. v1 trained on 40 creatures across 13 body plans (~3
+# per plan, against 34 per plan for heroes); v2 doubles that to 80. Measured
+# on identical prompts and seeds: the Obsidian Tortoise went from an
+# unrecognisable spiky quadruped to an actual shelled tortoise, aberrants stopped
+# collapsing into generic demons, and colour saturation improved across the whole
+# roster — v1 trended toward greyscale. The 3000 and 4000 step checkpoints were
+# compared and are near-identical, so there is no overfitting to back away from.
 MONSTER_LORA = os.getenv("COMFY_LORA_MONSTER", (
-    "Everspire_Monsters_v1.safetensors:0.75,"
+    "Everspire_Monsters_v2.safetensors:0.75,"
     "AddMicroDetails_NoobAI_v5.safetensors:0.3"
 ))
 # Equipment icons and zone/floor scenery each have their own adapter now.
@@ -2254,7 +2261,7 @@ ENEMY_PORTRAIT_HINTS = {
 
 def _generate_enemy_portrait(enemy_name: str, hint: str, tier_dir: str = "normal"):
     try:
-        from services.comfy_service import generate_portrait_comfy
+        from services.comfy_service import generate_portrait_comfy, transparent_enabled
         from services.combat_service import ENEMY_WAVE
         wave = ENEMY_WAVE.get(enemy_name)
         out_dir = f"{ENEMY_DIR}/{tier_dir}/wave{wave}" if wave else f"{ENEMY_DIR}/{tier_dir}"
@@ -2284,12 +2291,29 @@ def _generate_enemy_portrait(enemy_name: str, hint: str, tier_dir: str = "normal
                 f"{_enemy_pose(plan)}, dramatic lighting, {MONSTER_STYLE}"
             )
             negative = MONSTER_NEGATIVE
-        # Strip scenery from the COMPOSED prompt, not just the hint: 96 of the
-        # 127 hints end in a background clause AND both style blocks ask for one
-        # of their own ("dark atmospheric background"). Nothing stripped either
-        # here — only the hero path called this — so the model painted a dungeon
-        # behind every creature and sometimes welded a piece of it to their feet.
+        # Scenery OUT, flat black background IN.
+        #
+        # Two steps, and the second one is the part that was missing. Stripping
+        # alone was wrong: 96 of the 127 hints end in a scenery clause ("dark
+        # stone dungeon background") and both style blocks ask for one of their
+        # own, so removing them was right — but it left the model with NO
+        # instruction about the background at all, and it duly invented one.
+        # That is where the stone plinths and barrels under creatures came from.
+        #
+        # Enemies render on black and rembg cuts it (COMFY_TRANSPARENT is off,
+        # COMFY_REMBG_CUTOUT is on), so a plain black field is exactly what this
+        # pipeline wants. Naming it also makes the cutout itself more reliable:
+        # segmentation against a flat void is far easier than against an
+        # invented gradient scene, which is how an armoured orc shipped with its
+        # background box still attached.
+        #
+        # Only skipped under LayerDiffuse, where a background instruction fights
+        # alpha generation — which is the case _strip_bg_for_transparent was
+        # written for, and the reason applying it here unconditionally was wrong.
         prompt = _strip_bg_for_transparent(prompt)
+        if not transparent_enabled():
+            prompt += (", (plain solid black background:1.3), isolated on black, "
+                       "no ground, no floor, nothing beneath the feet")
         # FaceDetailer only for person-shaped enemies. It is a face-detect plus
         # inpaint pass — ~20 extra sampler steps — and on a spider, a dragon or
         # an ooze it is not merely wasted: when it does latch onto something it

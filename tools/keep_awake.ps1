@@ -23,7 +23,12 @@
 param(
     [string]$MatchPattern = "sdxl_train_network",
     [int]$PollSeconds = 60,
-    [int]$MaxHours = 12
+    [int]$MaxHours = 12,
+    # Consecutive misses before releasing. An unattended chain (train -> train
+    # -> generate) has gaps of a minute or two between stages where no matching
+    # process exists; exiting on the first miss would hand sleep back mid-chain
+    # and strand the rest of the run.
+    [int]$GraceChecks = 10
 )
 
 # Passed as a variable, not a here-string: PS 5.1 misparses the @'...'@ form
@@ -64,14 +69,20 @@ Write-Output "$t  Sleep suppressed while '$MatchPattern' runs. Display may still
 
 $deadline = (Get-Date).AddHours($MaxHours)
 $done = $false
+$misses = 0
 try {
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Seconds $PollSeconds
-        if (-not (Test-JobRunning)) {
-            $t = Stamp
-            Write-Output "$t  Job finished. Releasing."
-            $done = $true
-            break
+        if (Test-JobRunning) {
+            $misses = 0
+        } else {
+            $misses++
+            if ($misses -ge $GraceChecks) {
+                $t = Stamp
+                Write-Output "$t  No matching process for $GraceChecks checks. Releasing."
+                $done = $true
+                break
+            }
         }
     }
     if (-not $done) {

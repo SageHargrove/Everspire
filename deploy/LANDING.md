@@ -23,7 +23,7 @@ browser — so this replaces a placeholder, not an endpoint.
 | route | what |
 |---|---|
 | `GET /` | the landing page (`arena_server/landing/index.html`) |
-| `GET /download` | 302 → `github.com/SageHargrove/Everspire/releases/latest` |
+| `GET /download` | 302 → `github.com/SageHargrove/Giltgrave/releases/latest` |
 | `GET /status` | the JSON that used to be at `/` — kept for uptime checks |
 
 `/download` is indirection on purpose: publishing a new release needs no edit
@@ -55,7 +55,7 @@ curl -s -o /dev/null -w '%{redirect_url}\n' "$TOE_URL"/download
 ## Known gap
 
 **The download button has nothing to download.** No release has been published
-(`/repos/SageHargrove/Everspire/releases` returns `[]`), so the button lands on
+(`/repos/SageHargrove/Giltgrave/releases` returns `[]`), so the button lands on
 an empty releases page. Publish a build first, or accept that it's a
 placeholder until then:
 

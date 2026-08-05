@@ -51,7 +51,12 @@ from services.portrait_cache import (                             # noqa: E402
 from services.base_pool_characters import by_class_gender         # noqa: E402
 
 STAGE = os.path.join(BACKEND, "static", "portraits", "_base_pool_staging")
-HERO_LORA_NEW = "Everspire_Heroes_v1.safetensors:0.75,AddMicroDetails_NoobAI_v5.safetensors:0.3"
+# Env-overridable so a retrain can be pool-tested without editing this file --
+# and so the overnight chain can point it at a brand new adapter before anyone
+# has decided to make that adapter live in portrait_cache.
+HERO_LORA_NEW = os.getenv(
+    "COMFY_LORA_HERO",
+    "Everspire_Heroes_v1.safetensors:0.75,AddMicroDetails_NoobAI_v5.safetensors:0.3")
 
 # TWO RUNGS ONLY: the base look, and one "final form". Not a tuning choice —
 # intermediate rungs cannot work, and two attempts proved it.

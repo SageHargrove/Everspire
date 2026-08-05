@@ -39,12 +39,12 @@ echo [2/4] Downloading the art model (~7GB — grab a coffee)...
 curl -L -C - -o "%COMFY%\models\checkpoints\noobaiXLNAIXL_vPred10Version.safetensors" "https://huggingface.co/Laxhar/noobai-XL-Vpred-1.0/resolve/main/NoobAI-XL-Vpred-v1.0.safetensors" || goto fail
 
 echo [3/5] Downloading the Giltgrave style models (~450MB)...
-curl -L -C - -o "%COMFY%\models\loras\Everspire_Heroes_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Heroes_v1.safetensors" || goto fail
-curl -L -C - -o "%COMFY%\models\loras\Everspire_Monsters_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Monsters_v1.safetensors" || goto fail
-curl -L -C - -o "%COMFY%\models\loras\Everspire_Env_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Env_v1.safetensors" || goto fail
-curl -L -C - -o "%COMFY%\models\loras\Everspire_Equipment_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Equipment_v1.safetensors" || goto fail
-curl -L -C - -o "%COMFY%\models\loras\Everspire_Floors_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/Everspire_Floors_v1.safetensors" || goto fail
-curl -L -C - -o "%COMFY%\models\loras\AddMicroDetails_NoobAI_v5.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras/AddMicroDetails_NoobAI_v5.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\Everspire_Heroes_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Giltgrave/main/generation/loras/Everspire_Heroes_v1.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\Everspire_Monsters_v2.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Giltgrave/main/generation/loras/Everspire_Monsters_v2.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\Everspire_Env_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Giltgrave/main/generation/loras/Everspire_Env_v1.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\Everspire_Equipment_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Giltgrave/main/generation/loras/Everspire_Equipment_v1.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\Everspire_Floors_v1.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Giltgrave/main/generation/loras/Everspire_Floors_v1.safetensors" || goto fail
+curl -L -C - -o "%COMFY%\models\loras\AddMicroDetails_NoobAI_v5.safetensors" "https://media.githubusercontent.com/media/SageHargrove/Giltgrave/main/generation/loras/AddMicroDetails_NoobAI_v5.safetensors" || goto fail
 
 echo [4/5] Installing the content-aware cutout (transparent hero art, ~200MB)...
 rem The WHOLE folder: __init__.py is a thin wrapper that imports cutout.py

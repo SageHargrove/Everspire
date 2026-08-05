@@ -36,7 +36,7 @@ CHECKPOINT_NAME = "noobaiXLNAIXL_vPred10Version.safetensors"
 # the old Tower-of-Eternity LFS path outright — it 404s, it does not redirect
 # the way normal repo URLs do. Re-verify these two return 200 after any future
 # rename, or every player's generation install fails at the LoRA step.
-_LFS = "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/generation/loras"
+_LFS = "https://media.githubusercontent.com/media/SageHargrove/Giltgrave/main/generation/loras"
 # The Everspire adapters replaced the manhwa-derived ToE_Heroes_Main on
 # 2026-08-03. Env is included because facility art generation used ScenicILL,
 # a third-party LoRA that was never in this list — so that feature failed
@@ -44,7 +44,7 @@ _LFS = "https://media.githubusercontent.com/media/SageHargrove/Everspire/main/ge
 # appear here or it only works on the dev machine.
 LORAS = [
     (f"{_LFS}/Everspire_Heroes_v1.safetensors", "Everspire_Heroes_v1.safetensors"),
-    (f"{_LFS}/Everspire_Monsters_v1.safetensors", "Everspire_Monsters_v1.safetensors"),
+    (f"{_LFS}/Everspire_Monsters_v2.safetensors", "Everspire_Monsters_v2.safetensors"),
     (f"{_LFS}/Everspire_Env_v1.safetensors", "Everspire_Env_v1.safetensors"),
     # Equipment and Floors trained alongside the others but sat only on the dev
     # machine until 2026-08-04 — the exact failure the note above describes,

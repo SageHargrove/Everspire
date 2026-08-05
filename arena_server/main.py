@@ -234,7 +234,7 @@ SETUP_ASSET = "Giltgrave-Setup.exe"
 # /download?edition=gpu falls back to the standard installer (generation can
 # always be enabled in-game afterwards), so the button never dead-ends.
 SETUP_ASSET_GPU = "Giltgrave-Setup-GPU.exe"
-RELEASES_BASE = "https://github.com/SageHargrove/Everspire/releases"
+RELEASES_BASE = "https://github.com/SageHargrove/Giltgrave/releases"
 DOWNLOAD_URL = f"{RELEASES_BASE}/latest/download/{SETUP_ASSET}"
 RELEASES_URL = RELEASES_BASE
 

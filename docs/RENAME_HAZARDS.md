@@ -50,7 +50,20 @@ generation `Kleos_Heroes_v2` and let the old names die out naturally.
 
 ---
 
-## 2. GitHub repo URL — `github.com/SageHargrove/Everspire`
+## 2. GitHub repo URL — RESOLVED 2026-08-05
+
+The repo is now **`github.com/SageHargrove/Giltgrave`**. Liam renamed it on
+GitHub; the old URL 301-redirects. The remote and all four code references
+(`arena_server/main.py`, the landing page's "All versions" link,
+`backend/services/generation_installer.py`, `INSTALL_GENERATION.bat`) were
+updated the same day, plus `deploy/LANDING.md` and
+`deploy/lora-distribution.local.md`.
+
+This was safe to do precisely because **no release had ever been published** —
+the LFS-media and release-download URLs that GitHub does *not* reliably
+redirect had no consumers yet. The original warning is kept below.
+
+### original note — `github.com/SageHargrove/Everspire`
 
 **Where:** `arena_server/main.py` (`RELEASES_BASE`),
 `arena_server/landing/index.html` ("All versions" link),

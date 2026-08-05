@@ -93,12 +93,28 @@ def _scipy():
 
 
 def border_is_void(rgb: np.ndarray, probe_max: int = VOID_BORDER_MAX) -> bool:
-    """True when the frame edge really is a near-black void."""
+    """True when the frame edge really is a near-black void.
+
+    FRACTION DARK, not max-is-dark. The old test required the WHOLE edge to be
+    below the threshold, so any subject touching the frame disqualified it. A
+    griffon whose wings reached both sides measured max=255 and even p99.5=240
+    — not noise, real wing — and was declared "not a void". That switched the
+    flood off for the entire image, removing the only mechanism that recovers
+    thin bright structures segmentation drops, and the wings came back ragged.
+
+    But the flood does not need a perfect border. void_flood_fg seeds from dark
+    edge pixels and only propagates THROUGH dark pixels, so a bright wing on the
+    edge is simply not a seed — it cannot corrupt the result. All that is really
+    required is enough dark edge to seed from, which is what this now measures.
+
+    0.6 still rejects a genuine lit backdrop (a painted scene has few dark edge
+    pixels) while accepting a black page with a subject crossing it."""
     edges = np.concatenate([
         rgb[:3, :, :].reshape(-1, 3), rgb[-3:, :, :].reshape(-1, 3),
         rgb[:, :3, :].reshape(-1, 3), rgb[:, -3:, :].reshape(-1, 3),
     ])
-    return int(edges.max()) <= probe_max
+    dark_fraction = float((edges.max(axis=1) <= probe_max).mean())
+    return dark_fraction >= 0.6
 
 
 def void_flood_fg(rgb: np.ndarray, ndimage, dark_thresh: int = VOID_THRESH) -> np.ndarray:
@@ -128,6 +144,95 @@ def trim_rgba(arr: np.ndarray, margin_frac: float = 0.05) -> np.ndarray:
                max(xs.min() - m, 0):min(xs.max() + 1 + m, w)]
 
 
+
+# ── magenta chroma key ──────────────────────────────────────────────────────
+#
+# The Aug-2026 LoRA retrain moved BOTH training sets onto flat magenta
+# (#FF00FF), so the adapters now render magenta backgrounds. That turns the
+# cutout from a segmentation problem into a colour test, and the difference is
+# not incremental: segmentation cannot separate a black-furred beast from a
+# black void because subject and background are the same colour AND the same
+# connected region, whereas nothing in this art direction is magenta.
+#
+# Tried and rejected before this: border flood (ate dark cloaks), isnet-anime
+# (returns nothing on non-humanoids), isnet-general-use (works, but still keeps
+# background enclosed by a curled tail), LayerDiffuse (renders an empty frame on
+# this vpred checkpoint).
+KEY_MIN = 110        # R and B must both clear this
+KEY_GREEN_GAP = 60   # G must sit this far below both - magenta is R+B, no G
+
+
+def magenta_mask(rgb: np.ndarray) -> np.ndarray:
+    """True where the pixel is chroma-key magenta."""
+    R = rgb[:, :, 0].astype(np.int16)
+    G = rgb[:, :, 1].astype(np.int16)
+    B = rgb[:, :, 2].astype(np.int16)
+    return (R > KEY_MIN) & (B > KEY_MIN) & (G < R - KEY_GREEN_GAP) & (G < B - KEY_GREEN_GAP)
+
+
+def border_is_magenta(rgb: np.ndarray, need: float = 0.80) -> bool:
+    """True when the frame edge is mostly key colour.
+
+    Fraction, not all-or-nothing, for the same reason border_is_void uses one:
+    a wing or a cloak crossing the frame edge is normal and must not disqualify
+    the whole image."""
+    k = magenta_mask(rgb)
+    edge = np.concatenate([k[:3].ravel(), k[-3:].ravel(), k[:, :3].ravel(), k[:, -3:].ravel()])
+    return float(edge.mean()) >= need
+
+
+def chroma_cutout_rgba(pil_rgb, trim: bool = True):
+    """Cut on colour. Returns RGBA, or None if this isn't a keyed image.
+
+    Despeckles the alpha so JPEG-ish ringing around the subject does not leave a
+    magenta fringe, and de-spills the edge: pixels bordering the key pick up a
+    pink cast from the renderer, which reads as a halo once the sprite sits on a
+    dark zone plate."""
+    rgb = np.asarray(pil_rgb.convert("RGB"))
+    if not border_is_magenta(rgb):
+        return None
+    key = magenta_mask(rgb)
+    fg = ~key
+
+    ndimage = _scipy()
+    if ndimage is not None:
+        # Fill key-coloured pinholes INSIDE the figure (antialiasing against
+        # bright lineart can trip the threshold), but never fill a genuine gap:
+        # only holes fully enclosed by figure are reclaimed.
+        holes = ndimage.binary_fill_holes(fg) & ~fg
+        hl, hn = ndimage.label(holes)
+        if hn:
+            hsz = ndimage.sum(holes, hl, range(1, hn + 1))
+            fg = fg | np.isin(hl, np.where(hsz < 512)[0] + 1)
+        # Drop specks of stray subject-coloured noise floating in the key.
+        lbl, n = ndimage.label(fg)
+        if n > 1:
+            sizes = ndimage.sum(fg, lbl, range(1, n + 1))
+            fg = np.isin(lbl, np.where(sizes >= 64)[0] + 1)
+
+    alpha = (fg * 255).astype(np.uint8)
+    out = np.dstack([rgb.copy(), alpha])
+
+    # De-spill: where a kept pixel is still magenta-leaning, pull green up to
+    # the midpoint of red and blue. Untouched elsewhere, so real reds and blues
+    # in the art survive.
+    if ndimage is not None:
+        edge_band = ndimage.binary_dilation(key, iterations=2) & fg
+        if edge_band.any():
+            px = out[edge_band]
+            r, g, b = px[:, 0].astype(np.int16), px[:, 1].astype(np.int16), px[:, 2].astype(np.int16)
+            spill = g < (r + b) // 2 - 12
+            g[spill] = ((r[spill] + b[spill]) // 2).astype(np.int16)
+            px[:, 1] = np.clip(g, 0, 255).astype(np.uint8)
+            out[edge_band] = px
+
+    if not (0.02 < (alpha > 128).mean() < 0.98):
+        return None
+    if trim:
+        out = trim_rgba(out)
+    return Image.fromarray(out, "RGBA")
+
+
 def cutout_rgba(pil_rgb: Image.Image, trim: bool = True,
                 beast: bool = False) -> Image.Image | None:
     """Cut one portrait. Returns RGBA, or None when the result fails the sanity
@@ -140,6 +245,13 @@ def cutout_rgba(pil_rgb: Image.Image, trim: bool = True,
 
     Never raises for a missing optional dependency: without scipy it degrades to
     segmentation alone, which is still far better than any flood."""
+    # Chroma key first: when the master is magenta this is exact, and no
+    # segmenter can beat exact. Returns None on a non-keyed master, so older
+    # black-background art falls through to the segmentation path below.
+    keyed = chroma_cutout_rgba(pil_rgb, trim=trim)
+    if keyed is not None:
+        return keyed
+
     rgb = np.asarray(pil_rgb.convert("RGB"))
     try:
         from rembg import remove
@@ -182,6 +294,26 @@ def cutout_rgba(pil_rgb: Image.Image, trim: bool = True,
         if hn:
             hsz = ndimage.sum(holes, hl, range(1, hn + 1))
             fg = fg | np.isin(hl, np.where(hsz < 0.02 * fg.size)[0] + 1)
+
+        # NOT ADDED HERE: dropping "void-black enclosed by the figure" to kill
+        # the opaque slab inside a curled tail. Tried 2026-08-04 and reverted.
+        # Measured on dire sabertooth: the animal's own fur has median luminance
+        # 4, i.e. it IS void-black, and the gap inside its tail connects to the
+        # outer background, so the flood reaches it. Fur and background are the
+        # same colour AND the same connected region - no luminance rule can
+        # separate them, and the version that removed the slab also deleted
+        # 4,480px of the animal. Segmentation is the only signal that can tell
+        # them apart, and here it votes for keeping the gap.
+        #
+        # Two real fixes exist and both were tested and rejected the same day:
+        #   magenta chroma key - the monster LoRA trained on 80 flat-cel-on-
+        #     black images and treats a black background as its unnamed default,
+        #     so asking for magenta painted the CREATURE magenta (0% of the
+        #     border keyed). Unreachable without regenerating the training set.
+        #   LayerDiffuse native alpha - installed and preflight-clean, but with
+        #     this vpred checkpoint it renders a near-empty frame at uniform
+        #     alpha 108. This is why COMFY_TRANSPARENT defaults to 0.
+        # Revisit if the monster LoRA is ever retrained on keyed backgrounds.
 
     # Keep isnet-anime's soft edge — it antialiases against the lineart nicely —
     # but force full opacity wherever the flood is certain.

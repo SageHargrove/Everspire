@@ -1,0 +1,44 @@
+[
+ {
+  "name": "Carrion Quarry",
+  "blurb": "A vast pit of pale stone where something enormous was buried and partially exhumed, its ribcage still half-locked in the earth.",
+  "art_prompt": "exposed limestone cliff face, massive curved bone ribs half-embedded, rust-stained fractures, pale dust coating everything, dark soil seams, weathered vertebrae, scattered pale rubble, ochre and grey",
+  "band": "low",
+  "shape": "a sheer vertical face filling the whole view"
+ },
+ {
+  "name": "Bloat Mere",
+  "blurb": "A fetid swamp where a drowned colossus rots half-submerged, its corpse a island of bone and slick corruption that pilgrims dare not approach.",
+  "art_prompt": "colossal ribcage half-buried in black-green water, bone yellowed and split, moss-slick stones, rust-brown sediment clouds, fetid steam, skeletal fingers of sunken wood jutting from mire",
+  "band": "low",
+  "shape": "one colossal object dominating the frame"
+ },
+ {
+  "name": "Ashen Sluice",
+  "blurb": "A vast foundry's runoff channel, now a wasteland of cracked grey slag and rust-stained stone where things that hunger for metal have made their nests.",
+  "art_prompt": "cracked grey slag field, rust-red mineral veins, black iron tailings, pale ash coating everything, distant furnace-stack silhouettes, thin smoke band across sky",
+  "band": "mid",
+  "shape": "open ground under sky, seen close: the surface itself is the subject (cracked salt, ash dunes, black water, bone shingle), sky as a thin band."
+ },
+ {
+  "name": "Furnace Wound",
+  "blurb": "A vast foundry split by a chasm of cooled slag and still-glowing veins, where the forges of some dead civilization rust in the dark.",
+  "art_prompt": "massive iron foundry pit, black basalt walls, rust-red and ochre slag heaps, golden seams of cooling metal glowing in the depths, chains and copper piping corroded green, ash-pale dust hanging still",
+  "band": "mid",
+  "shape": "looking down into a shaft or pit from its rim, the far side visible across the gap."
+ },
+ {
+  "name": "Rib Cathedral",
+  "blurb": "A forest of titanic white bones rises from smoking earth, their marrow veins glowing amber where reality has split open between them.",
+  "art_prompt": "white bone spires packed dense, amber marrow-light bleeding through fractures, black ash settling on curved surfaces, violet void visible between the ribs, rust-red fissures in the smoking ground below",
+  "band": "high",
+  "shape": "a dense thicket or forest of vertical forms"
+ },
+ {
+  "name": "Godfall Ravine",
+  "blurb": "A chasm split by the toppling of a dead titan, its petrified flesh forming cliffs that bleed luminous ichor into pools of impossible geometry below.",
+  "art_prompt": "colossal fossilized ribcage descending into darkness, grey-white bone half-submerged in amber luminescent fluid, fractal edges where reality tears, black void beyond the furthest ribs, wisps of bioluminescent gas",
+  "band": "high",
+  "shape": "a hall, corridor or cavern receding away. Use this SPARINGLY."
+ }
+]

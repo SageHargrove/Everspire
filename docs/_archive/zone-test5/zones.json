@@ -1,0 +1,44 @@
+[
+ {
+  "name": "Ashfall Flats",
+  "blurb": "A wasteland of volcanic powder and cracked obsidian where the wind carries the stench of old sulfur and nothing living moves.",
+  "art_prompt": "grey ash dunes, black obsidian shards, rust-red volcanic stone, pale sky band above barren ground, scattered pumice, ash drifts catching weak light",
+  "band": "low",
+  "shape": "open ground under a wide sky, the surface itself the subject"
+ },
+ {
+  "name": "Sunken Mangrove",
+  "blurb": "A drowned forest of twisted roots and brackish water, where the air itself tastes of rot and things older than rot.",
+  "art_prompt": "tangled grey-brown mangrove roots, brackish brown water, pale fungal blooms on bark, luminescent algae trails, saturated air thick with spores, vertical maze of trunks and prop-roots, no sky visible",
+  "band": "low",
+  "shape": "a dense field of vertical forms"
+ },
+ {
+  "name": "The Furnace Galleries",
+  "blurb": "A vast foundry abandoned mid-work: casting pits still radiating heat, iron framework spanning the darkness, bronze ingots stacked like tombs.",
+  "art_prompt": "massive vaulted foundry interior, cast-iron support beams receding into shadow, cracked bronze vessels, rust-red oxide pooling on stone floor, dim amber light from cooling forge pits, copper-green patina on metal surfaces",
+  "band": "mid",
+  "shape": "an interior receding away: a hall, nave, gallery or cavern with architecture to either side."
+ },
+ {
+  "name": "Bone Galleries",
+  "blurb": "A vast ossuary laid bare by collapse—stacked crypts and funeral urns exposed to open sky, their ceramic vessels cracked and leaching ash.",
+  "art_prompt": "weathered bone-white catacomb walls, shattered terracotta urns, grey ash drifts across pale stone floor, funeral wreaths turned black and brittle, wide pale sky above",
+  "band": "mid",
+  "shape": "open ground under a wide sky, the surface itself the subject"
+ },
+ {
+  "name": "Shattered Meridian",
+  "blurb": "A forest of fractured crystal spires erupts from cracked earth, each one a shard of broken sky leaking impossible light; the air tastes of static and copper.",
+  "art_prompt": "fractured crystal spires, jagged translucent shards, violet and white light bleeding between cracks, rust-red earth split and curled, amber veins running through broken glass, void-black fissures opening between columns, air shimmering with refracted impossible geometry",
+  "band": "high",
+  "shape": "a dense field of vertical forms"
+ },
+ {
+  "name": "The Drowned Colosseum",
+  "blurb": "A vast amphitheater flooded with luminous brine that reflects no light, where titanic ribs of some dead god breach the poisoned surface and the air tastes of copper and ending.",
+  "art_prompt": "flooded amphitheater receding into murk, colossal pale ribcage emerging from bioluminescent green-grey water, rusted iron seating tiers half-submerged, salt-crusted stone columns, corpse-light reflecting off still toxic brine",
+  "band": "high",
+  "shape": "an interior receding away: a hall, nave, gallery or cavern with architecture to either side."
+ }
+]
